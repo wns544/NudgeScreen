@@ -1,5 +1,6 @@
 package com.example.screenlocktodo;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.KeyguardManager;
@@ -40,6 +41,7 @@ public class LockActivity extends Activity {
     static final String EXTRA_TURN_SCREEN_ON = "com.example.screenlocktodo.TURN_SCREEN_ON";
 
     private LinearLayout todoList;
+    private LinearLayout inputBlock;
     private LinearLayout inputRow;
     private TextView inputDivider;
     private EditText input;
@@ -58,6 +60,7 @@ public class LockActivity extends Activity {
     private long pendingTapItemId = -1L;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
+    private ValueAnimator inputBlockHeightAnimator;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final BroadcastReceiver clockReceiver = new BroadcastReceiver() {
         @Override
@@ -244,13 +247,22 @@ public class LockActivity extends Activity {
                 dp(72)
         ));
 
+        inputBlock = new LinearLayout(this);
+        inputBlock.setOrientation(LinearLayout.VERTICAL);
+        inputBlock.setVisibility(View.GONE);
+        inputBlock.setAlpha(0f);
+        inputBlock.setTranslationY(-dp(8));
+        LinearLayout.LayoutParams inputBlockParams = narrowParams();
+        inputBlockParams.height = 0;
+        root.addView(inputBlock, inputBlockParams);
+
         inputRow = new LinearLayout(this);
         inputRow.setOrientation(LinearLayout.HORIZONTAL);
         inputRow.setGravity(Gravity.CENTER_VERTICAL);
-        inputRow.setVisibility(View.GONE);
-        inputRow.setAlpha(0f);
-        inputRow.setTranslationY(-dp(8));
-        root.addView(inputRow, narrowParams());
+        inputBlock.addView(inputRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(46)
+        ));
 
         input = new EditText(this);
         input.setSingleLine(true);
@@ -275,10 +287,7 @@ public class LockActivity extends Activity {
 
         inputDivider = text("\u2013", 16, 0x66FFFFFF, false);
         inputDivider.setGravity(Gravity.CENTER);
-        inputDivider.setVisibility(View.GONE);
-        inputDivider.setAlpha(0f);
-        inputDivider.setTranslationY(-dp(6));
-        root.addView(inputDivider, fullWidthWrap());
+        inputBlock.addView(inputDivider, fullWidthWrap());
 
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
@@ -561,26 +570,22 @@ public class LockActivity extends Activity {
     }
 
     private void toggleInput() {
-        if (inputRow.getVisibility() == View.VISIBLE) {
+        if (inputBlock.getVisibility() == View.VISIBLE) {
             hideInput();
             return;
         }
         animatePlusOpen();
-        inputRow.animate().cancel();
-        inputDivider.animate().cancel();
-        inputRow.setVisibility(View.VISIBLE);
-        inputDivider.setVisibility(View.VISIBLE);
-        inputRow.setTranslationY(-dp(6));
-        inputDivider.setTranslationY(-dp(6));
-        inputRow.animate()
+        inputBlock.animate().cancel();
+        cancelInputBlockHeightAnimation();
+        inputBlock.setVisibility(View.VISIBLE);
+        inputBlock.setAlpha(0f);
+        inputBlock.setTranslationY(-dp(8));
+        setInputBlockHeight(0);
+        animateInputBlockHeight(0, inputBlockTargetHeight(), 190, null);
+        inputBlock.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .setDuration(170)
-                .start();
-        inputDivider.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .setDuration(170)
+                .setDuration(190)
                 .start();
         input.requestFocus();
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -591,18 +596,63 @@ public class LockActivity extends Activity {
 
     private void hideInput() {
         animatePlusClosed();
-        inputDivider.animate()
+        inputBlock.animate().cancel();
+        cancelInputBlockHeightAnimation();
+        animateInputBlockHeight(inputBlock.getHeight(), 0, 170, () -> inputBlock.setVisibility(View.GONE));
+        inputBlock.animate()
                 .alpha(0f)
                 .translationY(-dp(8))
-                .setDuration(140)
-                .withEndAction(() -> inputDivider.setVisibility(View.GONE))
+                .setDuration(170)
                 .start();
-        inputRow.animate()
-                .alpha(0f)
-                .translationY(-dp(8))
-                .setDuration(140)
-                .withEndAction(() -> inputRow.setVisibility(View.GONE))
-                .start();
+    }
+
+    private int inputBlockTargetHeight() {
+        return dp(72);
+    }
+
+    private void setInputBlockHeight(int height) {
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) inputBlock.getLayoutParams();
+        params.height = height;
+        inputBlock.setLayoutParams(params);
+    }
+
+    private void animateInputBlockHeight(int fromHeight, int toHeight, long duration, Runnable endAction) {
+        inputBlockHeightAnimator = ValueAnimator.ofInt(fromHeight, toHeight);
+        inputBlockHeightAnimator.setDuration(duration);
+        inputBlockHeightAnimator.addUpdateListener(animation -> setInputBlockHeight((Integer) animation.getAnimatedValue()));
+        if (endAction != null) {
+            inputBlockHeightAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+                private boolean canceled;
+
+                @Override
+                public void onAnimationCancel(android.animation.Animator animation) {
+                    canceled = true;
+                }
+
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    inputBlockHeightAnimator = null;
+                    if (!canceled) {
+                        endAction.run();
+                    }
+                }
+            });
+        } else {
+            inputBlockHeightAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    inputBlockHeightAnimator = null;
+                }
+            });
+        }
+        inputBlockHeightAnimator.start();
+    }
+
+    private void cancelInputBlockHeightAnimation() {
+        if (inputBlockHeightAnimator != null) {
+            inputBlockHeightAnimator.cancel();
+            inputBlockHeightAnimator = null;
+        }
     }
 
     private void animatePlusOpen() {
@@ -755,8 +805,7 @@ public class LockActivity extends Activity {
                     downY = event.getRawY();
                     curtainSwiping = false;
                     curtainBlocked = (!todosLocked && isInside(todoList, event))
-                            || isInside(inputRow, event)
-                            || isInside(inputDivider, event)
+                            || isInside(inputBlock, event)
                             || isInside(menuButton, event)
                             || isInside(menuPanel, event);
                     animate().cancel();
