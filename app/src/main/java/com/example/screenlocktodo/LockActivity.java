@@ -973,7 +973,7 @@ public class LockActivity extends Activity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             float centerX = getWidth() * 0.5f;
-            float centerY = getHeight() * 0.5f;
+            float centerY = getHeight() * 0.56f;
             float halfLength = dp(9) * (1f + 0.4142f * openProgress);
             canvas.save();
             canvas.rotate(45f * openProgress, centerX, centerY);
