@@ -273,9 +273,20 @@ public class LockActivity extends Activity {
         root.addView(dateText, fullWidthWrap());
         updateClock();
 
+        FrameLayout plusTouchRow = new FrameLayout(this);
+        plusTouchRow.setClickable(false);
+        plusTouchRow.setFocusable(false);
+        plusTouchRow.setClipChildren(false);
+        plusTouchRow.setClipToPadding(false);
         plusButton = new PlusButtonView(this);
         plusButton.setOnClickListener(v -> toggleInput());
-        root.addView(plusButton, new LinearLayout.LayoutParams(
+        FrameLayout.LayoutParams plusButtonParams = new FrameLayout.LayoutParams(
+                dp(52),
+                dp(52),
+                Gravity.CENTER
+        );
+        plusTouchRow.addView(plusButton, plusButtonParams);
+        root.addView(plusTouchRow, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(82)
         ));
@@ -1050,8 +1061,16 @@ public class LockActivity extends Activity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             float centerX = getWidth() * 0.5f;
-            float centerY = getHeight() * 0.585f;
+            float centerY = getHeight() * 0.5f;
             float halfLength = dp(9) * (1f + 0.4142f * openProgress);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(1));
+            paint.setColor(0x33FFFFFF);
+            canvas.drawCircle(centerX, centerY, dp(22), paint);
+
+            paint.setStrokeWidth(dp(2));
+            paint.setColor(0xBFFFFFFF);
             canvas.save();
             canvas.rotate(45f * openProgress, centerX, centerY);
             canvas.drawLine(centerX - halfLength, centerY, centerX + halfLength, centerY, paint);
