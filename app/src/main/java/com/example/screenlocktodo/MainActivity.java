@@ -16,6 +16,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -31,14 +32,15 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final int REQUEST_NOTIFICATIONS = 40;
 
-    private static final int COLOR_BG = 0xFFF4F7F4;
-    private static final int COLOR_INK = 0xFF172033;
-    private static final int COLOR_MUTED = 0xFF667085;
+    private static final int COLOR_BG = 0xFFF5F5F7;
+    private static final int COLOR_INK = 0xFF1D1D1F;
+    private static final int COLOR_MUTED = 0xFF6E6E73;
     private static final int COLOR_PANEL = 0xFFFFFFFF;
-    private static final int COLOR_LINE = 0xFFE2E8E2;
-    private static final int COLOR_ACCENT = 0xFF2D8C7F;
-    private static final int COLOR_GREEN = 0xFF1F8A5F;
-    private static final int COLOR_DANGER = 0xFFC24132;
+    private static final int COLOR_LINE = 0xFFE5E5EA;
+    private static final int COLOR_ACCENT = 0xFF007AFF;
+    private static final int COLOR_GREEN = 0xFF34C759;
+    private static final int COLOR_DANGER = 0xFFFF3B30;
+    private static final int COLOR_FIELD = 0xFFF2F2F7;
 
     private LinearLayout todoList;
     private EditText input;
@@ -47,6 +49,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        configureMainWindow();
         requestNotificationPermission();
         LockMonitorService.start(this);
         registerBackHandler();
@@ -95,6 +98,24 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void configureMainWindow() {
+        Window window = getWindow();
+        window.setStatusBarColor(COLOR_BG);
+        window.setNavigationBarColor(COLOR_BG);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int flags = window.getDecorView().getSystemUiVisibility()
+                    | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
+            window.getDecorView().setSystemUiVisibility(flags);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.setNavigationBarContrastEnforced(false);
+            window.setStatusBarContrastEnforced(false);
+        }
+    }
+
     private View buildContent() {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -102,7 +123,7 @@ public class MainActivity extends Activity {
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18), dp(18), dp(18), dp(24));
+        root.setPadding(dp(20), dp(26), dp(20), dp(28));
         scroll.addView(root, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT
@@ -119,28 +140,18 @@ public class MainActivity extends Activity {
     private View hero() {
         LinearLayout hero = new LinearLayout(this);
         hero.setOrientation(LinearLayout.VERTICAL);
-        hero.setPadding(dp(20), dp(20), dp(20), dp(18));
-        hero.setBackground(gradient(0xFF162033, 0xFF1C5C53));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            hero.setElevation(dp(2));
-        }
+        hero.setPadding(0, dp(4), 0, dp(8));
 
-        TextView eyebrow = text("\uc7a0\uae08\ud654\uba74 \ucee8\ud2b8\ub864", 13, 0xBFFFFFFF, false);
-        hero.addView(eyebrow);
-
-        TextView title = text("Todo Lock", 32, 0xFFFFFFFF, true);
-        title.setPadding(0, dp(4), 0, 0);
+        TextView title = text("Todo Lock", 34, COLOR_INK, true);
+        title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         hero.addView(title);
-
-        TextView subtitle = text("\ud654\uba74\uc774 \ucf1c\uc9c0\uba74 \ud560\uc77c\uc744 \uba3c\uc800 \ubcf4\uace0, \ucee4\ud2bc\ucc98\ub7fc \ubc00\uc5b4 \uc9c0\ubb38/PIN\uc73c\ub85c \uc774\uc5b4\uac11\ub2c8\ub2e4.", 15, 0xDFFFFFFF, false);
-        subtitle.setPadding(0, dp(8), 0, dp(16));
-        hero.addView(subtitle);
 
         LinearLayout chips = new LinearLayout(this);
         chips.setOrientation(LinearLayout.HORIZONTAL);
         chips.setGravity(Gravity.LEFT);
-        chips.addView(chip("\uc2e4\ud589 \uc911", 0x2239D98A, 0xFFE8FFF5));
-        TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? "\uc88c\uc6b0 \ucee4\ud2bc" : "\uc624\ub978\ucabd \ucee4\ud2bc", 0x2246C2FF, 0xFFE8F7FF);
+        chips.setPadding(0, dp(12), 0, 0);
+        chips.addView(chip("\uc2e4\ud589 \uc911", 0x1F34C759, COLOR_GREEN));
+        TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? "\uc88c\uc6b0 \ucee4\ud2bc" : "\uc624\ub978\ucabd \ucee4\ud2bc", 0x1F007AFF, COLOR_ACCENT);
         LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dp(34)
@@ -154,15 +165,15 @@ public class MainActivity extends Activity {
 
     private View lockSettingsCard() {
         LinearLayout card = card();
-        card.addView(sectionTitle("\uc7a0\uae08\ud654\uba74 \uc124\uc815", "\ubc30\uacbd, \ubc00\uae30 \ubc29\uc2dd, \uc2dc\uc791 \uc18d\ub3c4\ub97c \uc870\uc815\ud569\ub2c8\ub2e4."));
+        card.addView(sectionTitle("\uc7a0\uae08\ud654\uba74", null));
 
         LinearLayout opacityHeader = new LinearLayout(this);
         opacityHeader.setGravity(Gravity.CENTER_VERTICAL);
         opacityHeader.setOrientation(LinearLayout.HORIZONTAL);
-        opacityHeader.setPadding(0, dp(14), 0, dp(2));
-        opacityHeader.addView(text("\ubc30\uacbd \uc5b4\ub461\uae30", 16, COLOR_INK, true),
+        opacityHeader.setPadding(0, dp(16), 0, 0);
+        opacityHeader.addView(text("\ubc30\uacbd \uc5b4\ub461\uae30", 16, COLOR_INK, false),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-        opacityValue = text(AppSettings.overlayOpacity(this) + "%", 18, COLOR_ACCENT, true);
+        opacityValue = text(AppSettings.overlayOpacity(this) + "%", 16, COLOR_ACCENT, false);
         opacityValue.setGravity(Gravity.RIGHT);
         opacityHeader.addView(opacityValue, new LinearLayout.LayoutParams(dp(70), LinearLayout.LayoutParams.WRAP_CONTENT));
         card.addView(opacityHeader);
@@ -190,11 +201,13 @@ public class MainActivity extends Activity {
             }
         });
 
+        card.addView(divider());
+
         CheckBox curtainBothDirections = new CheckBox(this);
-        curtainBothDirections.setText("\ucee4\ud2bc \uc7a0\uae08\ud574\uc81c: \uc88c\uc6b0 \uc5b4\ub290 \ucabd\uc73c\ub85c\ub4e0 \ubc00\uae30");
+        curtainBothDirections.setText("\uc88c\uc6b0 \ubc00\uae30 \ud5c8\uc6a9");
         curtainBothDirections.setTextSize(15);
         curtainBothDirections.setTextColor(COLOR_INK);
-        curtainBothDirections.setPadding(0, dp(8), 0, dp(2));
+        curtainBothDirections.setPadding(0, dp(10), 0, dp(2));
         curtainBothDirections.setChecked(AppSettings.curtainUnlockBothDirections(this));
         curtainBothDirections.setOnCheckedChangeListener((buttonView, isChecked) -> {
             AppSettings.setCurtainUnlockBothDirections(MainActivity.this, isChecked);
@@ -208,7 +221,7 @@ public class MainActivity extends Activity {
 
     private View todoCard() {
         LinearLayout card = card();
-        card.addView(sectionTitle("\uc7a0\uae08\ud654\uba74 \ud560\uc77c", "\uc7a0\uae08\ud654\uba74\uc5d0 \ubc14\ub85c \ubcf4\uc77c \ubb38\uc7a5\ub4e4\uc785\ub2c8\ub2e4."));
+        card.addView(sectionTitle("\ud560 \uc77c", null));
 
         LinearLayout inputRow = new LinearLayout(this);
         inputRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -226,7 +239,7 @@ public class MainActivity extends Activity {
         input.setHintTextColor(0x99667085);
         input.setTextSize(15);
         input.setPadding(dp(14), 0, dp(14), 0);
-        input.setBackground(roundedStroke(0xFFF8FAF8, COLOR_LINE, 8));
+        input.setBackground(rounded(COLOR_FIELD, 8));
         inputRow.addView(input, new LinearLayout.LayoutParams(0, dp(50), 1));
 
         Button add = filledButton("\ucd94\uac00");
@@ -245,17 +258,17 @@ public class MainActivity extends Activity {
 
     private View actionCard() {
         LinearLayout card = card();
-        card.addView(sectionTitle("\uc571 \uc0c1\ud0dc", "\ubbf8\ub9ac\ubcf4\uae30\uc640 \uc2dc\uc2a4\ud15c \uad8c\ud55c\uc744 \ud655\uc778\ud569\ub2c8\ub2e4."));
+        card.addView(sectionTitle("\uc571", null));
 
-        Button preview = outlineButton("\uc7a0\uae08\ud654\uba74 \ubbf8\ub9ac\ubcf4\uae30");
+        Button preview = outlineButton("\ubbf8\ub9ac\ubcf4\uae30");
         preview.setOnClickListener(v -> startActivity(new Intent(this, LockActivity.class)));
         card.addView(preview, fullButtonParams());
 
-        Button notificationSettings = outlineButton("\uc54c\ub9bc/\uc804\uccb4\ud654\uba74 \uad8c\ud55c \uc5f4\uae30");
+        Button notificationSettings = outlineButton("\uc54c\ub9bc \uad8c\ud55c");
         notificationSettings.setOnClickListener(v -> openNotificationSettings());
         card.addView(notificationSettings, fullButtonParams());
 
-        Button batterySettings = outlineButton("\ubc30\ud130\ub9ac \ucd5c\uc801\ud654 \uc608\uc678 \uc124\uc815");
+        Button batterySettings = outlineButton("\ubc30\ud130\ub9ac \uc124\uc815");
         batterySettings.setOnClickListener(v -> openBatterySettings());
         card.addView(batterySettings, fullButtonParams());
 
@@ -266,12 +279,14 @@ public class MainActivity extends Activity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
 
-        TextView titleView = text(title, 19, COLOR_INK, true);
+        TextView titleView = text(title, 17, COLOR_INK, true);
         box.addView(titleView);
 
-        TextView subtitleView = text(subtitle, 14, COLOR_MUTED, false);
-        subtitleView.setPadding(0, dp(4), 0, 0);
-        box.addView(subtitleView);
+        if (subtitle != null && subtitle.length() > 0) {
+            TextView subtitleView = text(subtitle, 14, COLOR_MUTED, false);
+            subtitleView.setPadding(0, dp(4), 0, 0);
+            box.addView(subtitleView);
+        }
         return box;
     }
 
@@ -300,7 +315,7 @@ public class MainActivity extends Activity {
             TextView empty = text("\uc544\uc9c1 \ud560\uc77c\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.", 15, COLOR_MUTED, false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(24), 0, dp(18));
-            empty.setBackground(roundedStroke(0xFFF8FAF8, COLOR_LINE, 8));
+            empty.setBackground(rounded(COLOR_FIELD, 8));
             todoList.addView(empty, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     dp(86)
@@ -323,8 +338,8 @@ public class MainActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(10), dp(8), dp(8), dp(8));
-        row.setBackground(roundedStroke(item.done ? 0xFFF1F5F1 : 0xFFFFFFFF, COLOR_LINE, 8));
+        row.setPadding(dp(8), dp(8), dp(8), dp(8));
+        row.setBackground(rounded(item.done ? COLOR_FIELD : 0x00FFFFFF, 8));
 
         CheckBox checkBox = new CheckBox(this);
         checkBox.setChecked(item.done);
@@ -395,12 +410,24 @@ public class MainActivity extends Activity {
     private LinearLayout card() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(16), dp(16), dp(16), dp(16));
-        card.setBackground(roundedStroke(COLOR_PANEL, COLOR_LINE, 8));
+        card.setPadding(dp(16), dp(15), dp(16), dp(16));
+        card.setBackground(rounded(COLOR_PANEL, 8));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            card.setElevation(dp(1));
+            card.setElevation(0);
         }
         return card;
+    }
+
+    private View divider() {
+        View view = new View(this);
+        view.setBackgroundColor(COLOR_LINE);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                Math.max(1, dp(1))
+        );
+        params.topMargin = dp(4);
+        view.setLayoutParams(params);
+        return view;
     }
 
     private TextView chip(String value, int bgColor, int textColor) {
@@ -422,7 +449,8 @@ public class MainActivity extends Activity {
     private Button outlineButton(String label) {
         Button button = baseButton(label);
         button.setTextColor(COLOR_INK);
-        button.setBackground(roundedStroke(0xFFF8FAF8, COLOR_LINE, 8));
+        button.setGravity(Gravity.CENTER_VERTICAL);
+        button.setBackground(rounded(COLOR_FIELD, 8));
         return button;
     }
 
@@ -438,7 +466,7 @@ public class MainActivity extends Activity {
         button.setAllCaps(false);
         button.setText(label);
         button.setTextSize(15);
-        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
         button.setMinHeight(0);
         button.setMinWidth(0);
         button.setPadding(dp(10), 0, dp(10), 0);
@@ -451,7 +479,7 @@ public class MainActivity extends Activity {
         view.setTextSize(sp);
         view.setTextColor(color);
         view.setIncludeFontPadding(true);
-        view.setLineSpacing(dp(2), 1.0f);
+        view.setLineSpacing(dp(1), 1.0f);
         if (bold) {
             view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         }
