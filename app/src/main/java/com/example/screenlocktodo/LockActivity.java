@@ -3,8 +3,11 @@ package com.example.screenlocktodo;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.KeyguardManager;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -53,12 +56,12 @@ public class LockActivity extends Activity {
     private boolean todosLocked;
     private long pendingTapItemId = -1L;
     private boolean firstTodoRender = true;
+    private boolean clockReceiverRegistered;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
-    private final Runnable clockTicker = new Runnable() {
+    private final BroadcastReceiver clockReceiver = new BroadcastReceiver() {
         @Override
-        public void run() {
+        public void onReceive(Context context, Intent intent) {
             updateClock();
-            scheduleClockTick();
         }
     };
 
@@ -78,7 +81,6 @@ public class LockActivity extends Activity {
         configureLockWindow();
         LockMonitorService.cancelLockNotification(this);
         updateClock();
-        scheduleClockTick();
         refreshTodos();
     }
 
@@ -87,19 +89,19 @@ public class LockActivity extends Activity {
         super.onResume();
         LockMonitorService.cancelLockNotification(this);
         updateClock();
-        scheduleClockTick();
+        registerClockReceiver();
         refreshTodos();
     }
 
     @Override
     protected void onPause() {
-        uiHandler.removeCallbacks(clockTicker);
+        unregisterClockReceiver();
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
-        uiHandler.removeCallbacks(clockTicker);
+        unregisterClockReceiver();
         super.onDestroy();
     }
 
@@ -233,7 +235,6 @@ public class LockActivity extends Activity {
         dateText.setGravity(Gravity.CENTER);
         root.addView(dateText, fullWidthWrap());
         updateClock();
-        scheduleClockTick();
 
         plusButton = new PlusButtonView(this);
         plusButton.setOnClickListener(v -> toggleInput());
@@ -304,11 +305,25 @@ public class LockActivity extends Activity {
         dateText.setText(new SimpleDateFormat("EEEE, MMMM d", Locale.ENGLISH).format(now));
     }
 
-    private void scheduleClockTick() {
-        uiHandler.removeCallbacks(clockTicker);
-        long now = System.currentTimeMillis();
-        long delay = 60000L - (now % 60000L) + 250L;
-        uiHandler.postDelayed(clockTicker, delay);
+    private void registerClockReceiver() {
+        if (clockReceiverRegistered) {
+            return;
+        }
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(Intent.ACTION_TIME_TICK);
+        filter.addAction(Intent.ACTION_TIME_CHANGED);
+        filter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+        filter.addAction(Intent.ACTION_DATE_CHANGED);
+        registerReceiver(clockReceiver, filter);
+        clockReceiverRegistered = true;
+    }
+
+    private void unregisterClockReceiver() {
+        if (!clockReceiverRegistered) {
+            return;
+        }
+        unregisterReceiver(clockReceiver);
+        clockReceiverRegistered = false;
     }
 
     private void toggleMenu() {
