@@ -47,6 +47,7 @@ public class LockActivity extends Activity {
     private LinearLayout inputBlock;
     private LinearLayout inputRow;
     private TextView inputDivider;
+    private TextView topTodoDivider;
     private EditText input;
     private PlusButtonView plusButton;
     private TextView timeText;
@@ -333,6 +334,11 @@ public class LockActivity extends Activity {
         inputDivider.setGravity(Gravity.CENTER);
         inputBlock.addView(inputDivider, compactDividerParams());
 
+        topTodoDivider = text("\u2013", 16, 0x66FFFFFF, false);
+        topTodoDivider.setGravity(Gravity.CENTER);
+        topTodoDivider.setVisibility(View.GONE);
+        root.addView(topTodoDivider, compactDividerParams());
+
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
         todoList.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -445,6 +451,7 @@ public class LockActivity extends Activity {
 
         todoList.removeAllViews();
         List<TodoItem> items = TodoStore.load(this);
+        updateTopTodoDividerVisibility(!items.isEmpty() && inputBlock.getVisibility() != View.VISIBLE);
         if (items.isEmpty()) {
             TextView empty = text("\uc624\ub298\uc740 \uc544\uc9c1 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.", 16, 0xBFFFFFFF, false);
             empty.setGravity(Gravity.CENTER);
@@ -475,6 +482,13 @@ public class LockActivity extends Activity {
             }
         }
         firstTodoRender = false;
+    }
+
+    private void updateTopTodoDividerVisibility(boolean visible) {
+        if (topTodoDivider == null) {
+            return;
+        }
+        topTodoDivider.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     private View todoRow(TodoItem item, int index) {
@@ -923,6 +937,7 @@ public class LockActivity extends Activity {
             return;
         }
         animatePlusOpen();
+        updateTopTodoDividerVisibility(false);
         inputBlock.animate().cancel();
         cancelInputBlockHeightAnimation();
         inputBlock.setVisibility(View.VISIBLE);
@@ -946,7 +961,10 @@ public class LockActivity extends Activity {
         animatePlusClosed();
         inputBlock.animate().cancel();
         cancelInputBlockHeightAnimation();
-        animateInputBlockHeight(inputBlock.getHeight(), 0, 170, () -> inputBlock.setVisibility(View.GONE));
+        animateInputBlockHeight(inputBlock.getHeight(), 0, 170, () -> {
+            inputBlock.setVisibility(View.GONE);
+            updateTopTodoDividerVisibility(!TodoStore.load(this).isEmpty());
+        });
         inputBlock.animate()
                 .alpha(0f)
                 .translationY(-dp(8))
