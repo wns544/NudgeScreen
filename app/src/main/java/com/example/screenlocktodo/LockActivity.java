@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
-import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -20,7 +19,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
-import android.view.DragEvent;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -66,6 +64,8 @@ public class LockActivity extends Activity {
     private long draggingTodoId = -1L;
     private int draggingTodoIndex = -1;
     private int dragPreviewIndex = -1;
+    private View draggingTodoRow;
+    private float draggingTodoStartCenterY;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
     private ValueAnimator inputBlockHeightAnimator;
@@ -485,51 +485,101 @@ public class LockActivity extends Activity {
         label.setOnTouchListener(swipeActionListener);
         View.OnClickListener clickListener = v -> handleTodoTap(item);
         label.setOnClickListener(clickListener);
-        label.setOnLongClickListener(v -> startTodoDrag(row, item));
-        row.setOnDragListener((view, event) -> handleTodoDropTarget(row, index, event));
         return row;
     }
 
-    private boolean startTodoDrag(View row, TodoItem item) {
+    private void beginTodoDrag(View row, TodoItem item, float rawY) {
         draggingTodoId = item.id;
         draggingTodoIndex = indexOfTodoRow(row);
         dragPreviewIndex = draggingTodoIndex;
-        row.animate().scaleX(1.04f).scaleY(1.04f).alpha(0.82f).setDuration(120).start();
-        ClipData data = ClipData.newPlainText("todo_id", String.valueOf(item.id));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            row.startDragAndDrop(data, new View.DragShadowBuilder(row), item.id, 0);
-        } else {
-            row.startDrag(data, new View.DragShadowBuilder(row), item.id, 0);
+        draggingTodoRow = row;
+        int[] location = new int[2];
+        row.getLocationOnScreen(location);
+        draggingTodoStartCenterY = location[1] + row.getHeight() * 0.5f;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            row.setElevation(dp(6));
         }
-        return true;
+        row.animate().scaleX(1.03f).scaleY(1.03f).alpha(0.9f).setDuration(120).start();
     }
 
-    private boolean handleTodoDropTarget(View row, int targetIndex, DragEvent event) {
-        Object localState = event.getLocalState();
-        if (!(localState instanceof Long)) {
-            return true;
+    private void updateTodoDrag(float rawY) {
+        if (draggingTodoRow == null || draggingTodoIndex < 0) {
+            return;
         }
-        switch (event.getAction()) {
-            case DragEvent.ACTION_DRAG_ENTERED:
-                updateReorderPreview(targetIndex);
-                return true;
-            case DragEvent.ACTION_DRAG_EXITED:
-                return true;
-            case DragEvent.ACTION_DROP:
-                clearReorderPreview();
-                TodoStore.move(this, (Long) localState, targetIndex);
-                refreshTodos();
-                return true;
-            case DragEvent.ACTION_DRAG_ENDED:
-                clearReorderPreview();
-                draggingTodoId = -1L;
-                draggingTodoIndex = -1;
-                dragPreviewIndex = -1;
-                row.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(120).start();
-                return true;
-            default:
-                return true;
+        float translationY = rawY - draggingTodoStartCenterY;
+        draggingTodoRow.setTranslationY(translationY);
+
+        int targetIndex = dragTargetIndex(rawY);
+        updateReorderPreview(targetIndex);
+    }
+
+    private void finishTodoDrag(TodoItem item) {
+        if (draggingTodoRow == null || draggingTodoIndex < 0) {
+            resetTodoDragState();
+            return;
         }
+        int targetIndex = Math.max(0, dragPreviewIndex);
+        View row = draggingTodoRow;
+        row.animate()
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .alpha(1f)
+                .setDuration(150)
+                .withEndAction(() -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        row.setElevation(0f);
+                    }
+                    clearReorderPreview();
+                    if (targetIndex != draggingTodoIndex) {
+                        TodoStore.move(LockActivity.this, item.id, targetIndex);
+                        refreshTodos();
+                    }
+                    resetTodoDragState();
+                })
+                .start();
+    }
+
+    private void cancelTodoDrag() {
+        if (draggingTodoRow != null) {
+            draggingTodoRow.animate()
+                    .translationY(0f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .alpha(1f)
+                    .setDuration(140)
+                    .start();
+        }
+        clearReorderPreview();
+        resetTodoDragState();
+    }
+
+    private void resetTodoDragState() {
+        draggingTodoId = -1L;
+        draggingTodoIndex = -1;
+        dragPreviewIndex = -1;
+        draggingTodoRow = null;
+        draggingTodoStartCenterY = 0f;
+    }
+
+    private int dragTargetIndex(float rawY) {
+        int fallback = draggingTodoIndex;
+        for (int i = 0; i < todoList.getChildCount(); i += 2) {
+            View row = todoList.getChildAt(i);
+            Object tag = row.getTag();
+            if (tag instanceof Long && (Long) tag == draggingTodoId) {
+                continue;
+            }
+            int[] location = new int[2];
+            row.getLocationOnScreen(location);
+            float middle = location[1] + row.getHeight() * 0.5f;
+            int rowIndex = i / 2;
+            if (rawY < middle) {
+                return rowIndex;
+            }
+            fallback = rowIndex;
+        }
+        return Math.max(0, fallback);
     }
 
     private int indexOfTodoRow(View row) {
@@ -960,12 +1010,17 @@ public class LockActivity extends Activity {
             float shackleLeft = cx - dp(5);
             float shackleRight = cx + dp(5);
             if (locked) {
-                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(5),
-                        200, 140, false, paint);
+                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(5), 200, 140, false, paint);
+                canvas.drawLine(shackleLeft + dp(1), top + dp(1), shackleLeft + dp(1), top + dp(3), paint);
+                canvas.drawLine(shackleRight - dp(1), top + dp(1), shackleRight - dp(1), top + dp(3), paint);
             } else {
-                canvas.drawArc(shackleLeft - dp(4), shackleTop, shackleRight - dp(4), shackleBottom + dp(5),
-                        195, 118, false, paint);
-                canvas.drawLine(shackleRight - dp(4), top - dp(2), shackleRight + dp(1), top - dp(5), paint);
+                canvas.save();
+                canvas.rotate(-24f, cx + dp(2), top - dp(3));
+                float openLeft = shackleLeft + dp(3);
+                float openRight = shackleRight + dp(3);
+                canvas.drawArc(openLeft, shackleTop - dp(1), openRight, shackleBottom + dp(4), 205, 130, false, paint);
+                canvas.drawLine(openLeft + dp(1), top, openLeft + dp(1), top + dp(2), paint);
+                canvas.restore();
             }
         }
     }
@@ -1066,7 +1121,7 @@ public class LockActivity extends Activity {
                     downX = event.getRawX();
                     downY = event.getRawY();
                     curtainSwiping = false;
-                    curtainBlocked = (!todosLocked && isInside(todoList, event))
+                    curtainBlocked = (!todosLocked && isInsideTodoGestureTarget(event))
                             || isInside(inputBlock, event)
                             || isInside(menuButton, event)
                             || isInside(menuPanel, event);
@@ -1184,6 +1239,22 @@ public class LockActivity extends Activity {
                     && rawY >= location[1]
                     && rawY <= location[1] + child.getHeight();
         }
+
+        private boolean isInsideTodoGestureTarget(MotionEvent event) {
+            if (todoList == null || todoList.getVisibility() != View.VISIBLE) {
+                return false;
+            }
+            for (int i = 0; i < todoList.getChildCount(); i += 2) {
+                View row = todoList.getChildAt(i);
+                if (row instanceof LinearLayout && ((LinearLayout) row).getChildCount() > 1) {
+                    View label = ((LinearLayout) row).getChildAt(1);
+                    if (isInside(label, event)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
     }
 
     private final class SwipeActionListener implements View.OnTouchListener {
@@ -1220,7 +1291,7 @@ public class LockActivity extends Activity {
                     rowView.setBackgroundColor(0x00000000);
                     longPressRunnable = () -> {
                         longPressTriggered = true;
-                        startTodoDrag(rowView, item);
+                        beginTodoDrag(rowView, item, downY);
                     };
                     uiHandler.postDelayed(longPressRunnable, 520);
                     return true;
@@ -1231,6 +1302,7 @@ public class LockActivity extends Activity {
                         cancelLongPress();
                     }
                     if (longPressTriggered) {
+                        updateTodoDrag(event.getRawY());
                         return true;
                     }
                     if (!swiping && Math.abs(moveDx) > dp(14) && Math.abs(moveDx) > Math.abs(moveDy)) {
@@ -1253,7 +1325,7 @@ public class LockActivity extends Activity {
                 case MotionEvent.ACTION_UP:
                     cancelLongPress();
                     if (longPressTriggered) {
-                        rowView.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(120).start();
+                        finishTodoDrag(item);
                         return true;
                     }
                     float dx = event.getRawX() - downX;
@@ -1291,6 +1363,11 @@ public class LockActivity extends Activity {
                     return true;
                 case MotionEvent.ACTION_CANCEL:
                     cancelLongPress();
+                    if (longPressTriggered) {
+                        cancelTodoDrag();
+                        longPressTriggered = false;
+                        return true;
+                    }
                     rowView.animate()
                             .translationX(0f)
                             .scaleX(1f)
