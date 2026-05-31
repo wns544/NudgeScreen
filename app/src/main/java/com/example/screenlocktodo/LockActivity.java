@@ -40,6 +40,7 @@ public class LockActivity extends Activity {
     private TextView menuButton;
     private LinearLayout menuPanel;
     private TextView lockButton;
+    private View curtainBackground;
     private TodoItem lastDeletedItem;
     private int lastDeletedIndex = -1;
     private boolean todosLocked;
@@ -120,7 +121,13 @@ public class LockActivity extends Activity {
 
     private View buildContent() {
         FrameLayout shell = new CurtainFrameLayout(this);
-        shell.setBackgroundColor(overlayColor());
+
+        curtainBackground = new View(this);
+        curtainBackground.setBackgroundColor(overlayColor());
+        shell.addView(curtainBackground, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
 
         menuButton = text("\u22ee", 28, 0xDFFFFFFF, false);
         menuButton.setGravity(Gravity.CENTER);
@@ -598,9 +605,13 @@ public class LockActivity extends Activity {
                             || isInside(menuButton, event)
                             || isInside(menuPanel, event);
                     animate().cancel();
+                    if (curtainBackground != null) {
+                        curtainBackground.animate().cancel();
+                    }
                     if (!curtainBlocked) {
                         setTranslationX(0f);
                         setAlpha(1f);
+                        setCurtainBackgroundAlpha(1f);
                     }
                     break;
                 case MotionEvent.ACTION_MOVE:
@@ -642,25 +653,41 @@ public class LockActivity extends Activity {
                 float targetX = dx < 0 ? -getWidth() : getWidth();
                 animate()
                         .translationX(targetX)
-                        .alpha(0f)
                         .setDuration(240)
                         .withEndAction(() -> closeLockTask())
                         .start();
+                if (curtainBackground != null) {
+                    curtainBackground.animate()
+                            .alpha(0f)
+                            .setDuration(240)
+                            .start();
+                }
                 return;
             }
 
             animate()
                     .translationX(0f)
-                    .alpha(1f)
                     .setDuration(170)
                     .start();
+            if (curtainBackground != null) {
+                curtainBackground.animate()
+                        .alpha(1f)
+                        .setDuration(170)
+                        .start();
+            }
         }
 
         private void updateCurtainOpacity(float dx, boolean allowedDirection) {
             float threshold = Math.max(dp(150), getWidth() * 0.32f);
             float progress = Math.min(1f, Math.abs(dx) / threshold);
             float fadeStrength = allowedDirection ? 0.82f : 0.24f;
-            setAlpha(Math.max(0.18f, 1f - progress * fadeStrength));
+            setCurtainBackgroundAlpha(Math.max(0.18f, 1f - progress * fadeStrength));
+        }
+
+        private void setCurtainBackgroundAlpha(float alpha) {
+            if (curtainBackground != null) {
+                curtainBackground.setAlpha(alpha);
+            }
         }
 
         private boolean isInside(View child, MotionEvent event) {
