@@ -520,19 +520,25 @@ public class LockActivity extends Activity {
         int targetIndex = Math.max(0, dragPreviewIndex);
         View row = draggingTodoRow;
         row.animate().cancel();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            row.setElevation(0f);
-        }
-        clearReorderPreview();
-        if (targetIndex != draggingTodoIndex) {
-            TodoStore.move(LockActivity.this, item.id, targetIndex);
-        }
-        row.setTranslationY(0f);
-        row.setScaleX(1f);
-        row.setScaleY(1f);
-        row.setAlpha(1f);
-        resetTodoDragState();
-        refreshTodos();
+        float targetTranslation = (targetIndex - draggingTodoIndex) * todoMoveOffset();
+        row.animate()
+                .translationY(targetTranslation)
+                .scaleX(1f)
+                .scaleY(1f)
+                .alpha(1f)
+                .setDuration(150)
+                .withEndAction(() -> {
+                    if (targetIndex != draggingTodoIndex) {
+                        TodoStore.move(LockActivity.this, item.id, targetIndex);
+                        moveTodoViews(draggingTodoIndex, targetIndex);
+                    }
+                    clearReorderPreviewImmediately();
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        row.setElevation(0f);
+                    }
+                    resetTodoDragState();
+                })
+                .start();
     }
 
     private void cancelTodoDrag() {
@@ -612,6 +618,42 @@ public class LockActivity extends Activity {
         for (int i = 0; i < todoList.getChildCount(); i++) {
             todoList.getChildAt(i).animate().translationY(0f).setDuration(120).start();
         }
+    }
+
+    private void clearReorderPreviewImmediately() {
+        for (int i = 0; i < todoList.getChildCount(); i++) {
+            View child = todoList.getChildAt(i);
+            child.animate().cancel();
+            child.setTranslationY(0f);
+            child.setScaleX(1f);
+            child.setScaleY(1f);
+            child.setAlpha(1f);
+        }
+    }
+
+    private void moveTodoViews(int fromIndex, int toIndex) {
+        int fromChildIndex = fromIndex * 2;
+        if (fromChildIndex < 0 || fromChildIndex >= todoList.getChildCount()) {
+            return;
+        }
+        View row = todoList.getChildAt(fromChildIndex);
+        View divider = fromChildIndex + 1 < todoList.getChildCount()
+                ? todoList.getChildAt(fromChildIndex + 1)
+                : null;
+        android.animation.LayoutTransition transition = todoList.getLayoutTransition();
+        todoList.setLayoutTransition(null);
+        todoList.removeView(row);
+        if (divider != null) {
+            todoList.removeView(divider);
+        }
+
+        int safeIndex = Math.max(0, Math.min(toIndex, todoList.getChildCount() / 2));
+        int insertChildIndex = safeIndex * 2;
+        todoList.addView(row, insertChildIndex);
+        if (divider != null) {
+            todoList.addView(divider, insertChildIndex + 1);
+        }
+        todoList.setLayoutTransition(transition);
     }
 
     private int todoMoveOffset() {
