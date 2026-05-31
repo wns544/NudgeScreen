@@ -21,6 +21,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
@@ -45,6 +46,9 @@ public class MainActivity extends Activity {
     private LinearLayout todoList;
     private EditText input;
     private TextView opacityValue;
+    private View drawerScrim;
+    private LinearLayout drawerPanel;
+    private boolean drawerOpen;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,16 +82,24 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        closeMainTask();
+        handleBack();
     }
 
     private void registerBackHandler() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                     OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-                    this::closeMainTask
+                    this::handleBack
             );
         }
+    }
+
+    private void handleBack() {
+        if (drawerOpen) {
+            closeDrawer();
+            return;
+        }
+        closeMainTask();
     }
 
     private void closeMainTask() {
@@ -117,6 +129,9 @@ public class MainActivity extends Activity {
     }
 
     private View buildContent() {
+        drawerOpen = false;
+        FrameLayout shell = new FrameLayout(this);
+
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(COLOR_BG);
@@ -134,7 +149,15 @@ public class MainActivity extends Activity {
         root.addView(todoCard(), cardParams());
         root.addView(actionCard(), cardParams());
 
-        return scroll;
+        shell.addView(scroll, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        shell.addView(drawerLayer(), new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        return shell;
     }
 
     private View hero() {
@@ -142,9 +165,23 @@ public class MainActivity extends Activity {
         hero.setOrientation(LinearLayout.VERTICAL);
         hero.setPadding(0, dp(4), 0, dp(8));
 
+        LinearLayout titleRow = new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        hero.addView(titleRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
         TextView title = text("Todo Lock", 34, COLOR_INK, true);
         title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
-        hero.addView(title);
+        titleRow.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+        TextView menu = text("\u2630", 22, COLOR_INK, false);
+        menu.setGravity(Gravity.CENTER);
+        menu.setBackground(rounded(COLOR_FIELD, 8));
+        menu.setOnClickListener(v -> openDrawer());
+        titleRow.addView(menu, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
         LinearLayout chips = new LinearLayout(this);
         chips.setOrientation(LinearLayout.HORIZONTAL);
@@ -266,6 +303,103 @@ public class MainActivity extends Activity {
         card.addView(actionRow("\ubc30\ud130\ub9ac \uc124\uc815", v -> openBatterySettings(), false));
 
         return card;
+    }
+
+    private View drawerLayer() {
+        FrameLayout layer = new FrameLayout(this);
+        layer.setClipChildren(false);
+
+        drawerScrim = new View(this);
+        drawerScrim.setBackgroundColor(0x66000000);
+        drawerScrim.setAlpha(0f);
+        drawerScrim.setVisibility(View.GONE);
+        drawerScrim.setOnClickListener(v -> closeDrawer());
+        layer.addView(drawerScrim, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        int panelWidth = Math.round(getResources().getDisplayMetrics().widthPixels * 5f / 6f);
+        drawerPanel = new LinearLayout(this);
+        drawerPanel.setOrientation(LinearLayout.VERTICAL);
+        drawerPanel.setPadding(dp(20), dp(30), dp(20), dp(20));
+        drawerPanel.setBackground(rounded(COLOR_PANEL, 8));
+        drawerPanel.setClickable(true);
+        drawerPanel.setFocusable(true);
+        drawerPanel.setVisibility(View.GONE);
+        drawerPanel.setTranslationX(panelWidth);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            drawerPanel.setElevation(dp(12));
+        }
+
+        TextView title = text("\uc124\uc815", 28, COLOR_INK, true);
+        title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        drawerPanel.addView(title);
+
+        TextView subtitle = text("Todo Lock", 14, COLOR_MUTED, false);
+        subtitle.setPadding(0, dp(4), 0, dp(18));
+        drawerPanel.addView(subtitle);
+
+        drawerPanel.addView(actionRow("\ubbf8\ub9ac\ubcf4\uae30", v -> {
+            closeDrawer();
+            startActivity(new Intent(this, LockActivity.class));
+        }, true));
+        drawerPanel.addView(actionRow("\uc54c\ub9bc \uad8c\ud55c", v -> {
+            closeDrawer();
+            openNotificationSettings();
+        }, false));
+        drawerPanel.addView(actionRow("\ubc30\ud130\ub9ac \uc124\uc815", v -> {
+            closeDrawer();
+            openBatterySettings();
+        }, false));
+        drawerPanel.addView(actionRow("\ub2eb\uae30", v -> closeDrawer(), false));
+
+        FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
+                panelWidth,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                Gravity.RIGHT
+        );
+        layer.addView(drawerPanel, panelParams);
+        return layer;
+    }
+
+    private void openDrawer() {
+        if (drawerPanel == null || drawerScrim == null || drawerOpen) {
+            return;
+        }
+        drawerOpen = true;
+        drawerScrim.animate().cancel();
+        drawerPanel.animate().cancel();
+        drawerScrim.setVisibility(View.VISIBLE);
+        drawerPanel.setVisibility(View.VISIBLE);
+        drawerScrim.animate().alpha(1f).setDuration(180).start();
+        drawerPanel.animate()
+                .translationX(0f)
+                .setDuration(220)
+                .start();
+        drawerPanel.requestFocus();
+    }
+
+    private void closeDrawer() {
+        if (drawerPanel == null || drawerScrim == null || !drawerOpen) {
+            return;
+        }
+        drawerOpen = false;
+        int panelWidth = drawerPanel.getWidth() > 0
+                ? drawerPanel.getWidth()
+                : Math.round(getResources().getDisplayMetrics().widthPixels * 5f / 6f);
+        drawerScrim.animate().cancel();
+        drawerPanel.animate().cancel();
+        drawerScrim.animate()
+                .alpha(0f)
+                .setDuration(160)
+                .withEndAction(() -> drawerScrim.setVisibility(View.GONE))
+                .start();
+        drawerPanel.animate()
+                .translationX(panelWidth)
+                .setDuration(180)
+                .withEndAction(() -> drawerPanel.setVisibility(View.GONE))
+                .start();
     }
 
     private View sectionTitle(String title, String subtitle) {
