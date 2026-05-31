@@ -452,6 +452,9 @@ public class LockActivity extends Activity {
             }
             TextView divider = text("\u2013", 16, 0x66FFFFFF, false);
             divider.setGravity(Gravity.CENTER);
+            if (!todosLocked) {
+                divider.setOnTouchListener(new DividerTouchListener(i));
+            }
             todoList.addView(divider, fullWidthWrap());
             if (animateRows) {
                 animateIn(divider, i * 35 + 20);
@@ -1031,30 +1034,32 @@ public class LockActivity extends Activity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             float cx = getWidth() * 0.5f;
-            float cy = getHeight() * 0.52f;
-            float bodyWidth = dp(14);
-            float bodyHeight = dp(10);
+            float cy = getHeight() * 0.5f;
+            float bodyWidth = dp(12);
+            float bodyHeight = dp(14);
             float left = cx - bodyWidth * 0.5f;
-            float top = cy - bodyHeight * 0.1f;
+            float top = cy - dp(1);
             float right = cx + bodyWidth * 0.5f;
             float bottom = top + bodyHeight;
             canvas.drawRoundRect(left, top, right, bottom, dp(2), dp(2), paint);
 
-            float shackleTop = top - dp(8);
-            float shackleBottom = top + dp(1);
+            float shackleTop = top - dp(11);
+            float shackleBottom = top - dp(1);
             float shackleLeft = cx - dp(5);
             float shackleRight = cx + dp(5);
             if (locked) {
-                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(4), 200, 140, false, paint);
-                canvas.drawLine(shackleLeft + dp(1), top - dp(1), shackleLeft + dp(1), top, paint);
-                canvas.drawLine(shackleRight - dp(1), top - dp(1), shackleRight - dp(1), top, paint);
+                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(7), 205, 130, false, paint);
+                canvas.drawLine(shackleLeft + dp(1), top - dp(3), shackleLeft + dp(1), top - dp(1), paint);
+                canvas.drawLine(shackleRight - dp(1), top - dp(3), shackleRight - dp(1), top - dp(1), paint);
             } else {
                 canvas.save();
-                canvas.rotate(-24f, cx + dp(2), top - dp(3));
-                float openLeft = shackleLeft + dp(3);
-                float openRight = shackleRight + dp(3);
-                canvas.drawArc(openLeft, shackleTop - dp(1), openRight, shackleBottom + dp(4), 205, 130, false, paint);
-                canvas.drawLine(openLeft + dp(1), top - dp(1), openLeft + dp(1), top, paint);
+                canvas.rotate(-28f, cx + dp(4), top - dp(7));
+                float openLeft = cx - dp(1);
+                float openRight = cx + dp(9);
+                float openTop = top - dp(13);
+                float openBottom = top - dp(2);
+                canvas.drawArc(openLeft, openTop, openRight, openBottom + dp(7), 205, 125, false, paint);
+                canvas.drawLine(openLeft + dp(1), top - dp(5), openLeft + dp(1), top - dp(2), paint);
                 canvas.restore();
             }
         }
@@ -1289,6 +1294,56 @@ public class LockActivity extends Activity {
                 }
             }
             return false;
+        }
+    }
+
+    private final class DividerTouchListener implements View.OnTouchListener {
+        private final int dividerIndex;
+        private SwipeActionListener activeDelegate;
+
+        DividerTouchListener(int dividerIndex) {
+            this.dividerIndex = dividerIndex;
+        }
+
+        @Override
+        public boolean onTouch(View view, MotionEvent event) {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN || activeDelegate == null) {
+                activeDelegate = delegateForDividerTouch(view, event);
+            }
+            if (activeDelegate == null) {
+                return false;
+            }
+            boolean handled = activeDelegate.onTouch(view, event);
+            if (event.getActionMasked() == MotionEvent.ACTION_UP
+                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                activeDelegate = null;
+            }
+            return handled;
+        }
+
+        private SwipeActionListener delegateForDividerTouch(View divider, MotionEvent event) {
+            List<TodoItem> items = TodoStore.load(LockActivity.this);
+            if (items.isEmpty()) {
+                return null;
+            }
+            int[] location = new int[2];
+            divider.getLocationOnScreen(location);
+            float middleY = location[1] + divider.getHeight() * 0.5f;
+            int targetIndex = event.getRawY() < middleY ? dividerIndex : dividerIndex + 1;
+            targetIndex = Math.max(0, Math.min(targetIndex, items.size() - 1));
+            int rowChildIndex = targetIndex * 2;
+            if (rowChildIndex < 0 || rowChildIndex >= todoList.getChildCount()) {
+                return null;
+            }
+            View row = todoList.getChildAt(rowChildIndex);
+            if (!(row instanceof LinearLayout) || ((LinearLayout) row).getChildCount() <= 2) {
+                return null;
+            }
+            View hintView = ((LinearLayout) row).getChildAt(2);
+            if (!(hintView instanceof TextView)) {
+                return null;
+            }
+            return new SwipeActionListener(items.get(targetIndex), targetIndex, row, (TextView) hintView);
         }
     }
 
