@@ -620,21 +620,21 @@ public class LockActivity extends Activity {
 
     private int dragTargetIndex(float rawY) {
         int itemCount = Math.max(0, (todoList.getChildCount() + 1) / 2);
+        int nearestIndex = Math.max(0, Math.min(draggingTodoIndex, itemCount - 1));
+        float nearestDistance = Float.MAX_VALUE;
         for (int i = 0; i < todoList.getChildCount(); i += 2) {
             View row = todoList.getChildAt(i);
-            Object tag = row.getTag();
-            if (tag instanceof Long && (Long) tag == draggingTodoId) {
-                continue;
-            }
             int[] location = new int[2];
             row.getLocationOnScreen(location);
             float middle = location[1] + row.getHeight() * 0.5f;
             int rowIndex = i / 2;
-            if (rawY < middle) {
-                return rowIndex;
+            float distance = Math.abs(rawY - middle);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestIndex = rowIndex;
             }
         }
-        return Math.max(0, itemCount - 1);
+        return nearestIndex;
     }
 
     private int indexOfTodoRow(View row) {
