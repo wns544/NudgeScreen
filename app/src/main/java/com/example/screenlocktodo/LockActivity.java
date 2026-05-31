@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.app.KeyguardManager;
 import android.content.ClipData;
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -37,7 +39,7 @@ public class LockActivity extends Activity {
     private LinearLayout todoList;
     private LinearLayout inputRow;
     private EditText input;
-    private TextView plusButton;
+    private View plusButton;
     private TextView undoButton;
     private TextView menuButton;
     private LinearLayout menuPanel;
@@ -206,11 +208,12 @@ public class LockActivity extends Activity {
         date.setGravity(Gravity.CENTER);
         root.addView(date, fullWidthWrap());
 
-        plusButton = text("+", 32, 0xBFFFFFFF, false);
-        plusButton.setGravity(Gravity.CENTER);
-        plusButton.setPadding(0, dp(24), 0, dp(16));
+        plusButton = new PlusButtonView(this);
         plusButton.setOnClickListener(v -> toggleInput());
-        root.addView(plusButton, fullWidthWrap());
+        root.addView(plusButton, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(72)
+        ));
 
         inputRow = new LinearLayout(this);
         inputRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -498,14 +501,11 @@ public class LockActivity extends Activity {
         animatePlusOpen();
         inputRow.animate().cancel();
         inputRow.setVisibility(View.VISIBLE);
-        inputRow.setScaleX(0.96f);
-        inputRow.setScaleY(0.96f);
+        inputRow.setTranslationY(-dp(6));
         inputRow.animate()
                 .alpha(1f)
                 .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(190)
+                .setDuration(170)
                 .start();
         input.requestFocus();
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -519,9 +519,7 @@ public class LockActivity extends Activity {
         inputRow.animate()
                 .alpha(0f)
                 .translationY(-dp(8))
-                .scaleX(0.96f)
-                .scaleY(0.96f)
-                .setDuration(160)
+                .setDuration(140)
                 .withEndAction(() -> inputRow.setVisibility(View.GONE))
                 .start();
     }
@@ -533,14 +531,9 @@ public class LockActivity extends Activity {
         plusButton.animate().cancel();
         plusButton.animate()
                 .rotation(45f)
-                .scaleX(1.16f)
-                .scaleY(1.16f)
-                .setDuration(120)
-                .withEndAction(() -> plusButton.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(110)
-                        .start())
+                .alpha(0.9f)
+                .translationY(-dp(2))
+                .setDuration(160)
                 .start();
     }
 
@@ -551,15 +544,33 @@ public class LockActivity extends Activity {
         plusButton.animate().cancel();
         plusButton.animate()
                 .rotation(0f)
-                .scaleX(0.9f)
-                .scaleY(0.9f)
-                .setDuration(90)
-                .withEndAction(() -> plusButton.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(110)
-                        .start())
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(150)
                 .start();
+    }
+
+    private final class PlusButtonView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        PlusButtonView(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+            paint.setColor(0xBFFFFFFF);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeWidth(dp(2));
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float centerX = getWidth() * 0.5f;
+            float centerY = getHeight() * 0.55f;
+            float halfLength = dp(9);
+            canvas.drawLine(centerX - halfLength, centerY, centerX + halfLength, centerY, paint);
+            canvas.drawLine(centerX, centerY - halfLength, centerX, centerY + halfLength, paint);
+        }
     }
 
     private void continueSystemUnlock() {
