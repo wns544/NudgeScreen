@@ -49,11 +49,11 @@ public class MainActivity extends Activity {
     private TextView opacityValue;
     private View drawerScrim;
     private LinearLayout drawerPanel;
-    private View drawerGestureZone;
     private boolean drawerOpen;
     private float drawerDownX;
     private float drawerDownY;
     private boolean drawerSwiping;
+    private boolean drawerOpening;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,8 +135,7 @@ public class MainActivity extends Activity {
 
     private View buildContent() {
         drawerOpen = false;
-        FrameLayout shell = new FrameLayout(this);
-        shell.setOnTouchListener((view, event) -> handleShellSwipe(event));
+        FrameLayout shell = new DrawerRootLayout(this);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -155,12 +154,6 @@ public class MainActivity extends Activity {
         root.addView(todoCard(), cardParams());
 
         shell.addView(scroll, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-        ));
-        drawerGestureZone = new View(this);
-        drawerGestureZone.setOnTouchListener((view, event) -> handleShellSwipe(event));
-        shell.addView(drawerGestureZone, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -307,7 +300,6 @@ public class MainActivity extends Activity {
     private View drawerLayer() {
         FrameLayout layer = new FrameLayout(this);
         layer.setClipChildren(false);
-        layer.setOnTouchListener((view, event) -> handleShellSwipe(event));
 
         drawerScrim = new View(this);
         drawerScrim.setBackgroundColor(0x66000000);
@@ -321,7 +313,7 @@ public class MainActivity extends Activity {
         ));
 
         int panelWidth = Math.round(getResources().getDisplayMetrics().widthPixels * 5f / 6f);
-        drawerPanel = new LinearLayout(this);
+        drawerPanel = new DrawerPanelLayout(this);
         drawerPanel.setOrientation(LinearLayout.VERTICAL);
         drawerPanel.setPadding(dp(20), dp(30), dp(20), dp(20));
         drawerPanel.setBackground(rounded(COLOR_PANEL, 8));
@@ -329,7 +321,6 @@ public class MainActivity extends Activity {
         drawerPanel.setFocusable(true);
         drawerPanel.setVisibility(View.GONE);
         drawerPanel.setTranslationX(panelWidth);
-        drawerPanel.setOnTouchListener((view, event) -> handleDrawerSwipe(event));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             drawerPanel.setElevation(dp(12));
         }
@@ -365,36 +356,115 @@ public class MainActivity extends Activity {
         return layer;
     }
 
-    private boolean handleShellSwipe(MotionEvent event) {
-        if (drawerOpen) {
-            return false;
+    private final class DrawerRootLayout extends FrameLayout {
+        DrawerRootLayout(Context context) {
+            super(context);
         }
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-                drawerDownX = event.getRawX();
-                drawerDownY = event.getRawY();
-                drawerSwiping = drawerDownX > getResources().getDisplayMetrics().widthPixels * 0.5f;
-                return drawerSwiping;
-            case MotionEvent.ACTION_MOVE:
-                if (!drawerSwiping) {
-                    return false;
-                }
-                float dx = event.getRawX() - drawerDownX;
-                float dy = event.getRawY() - drawerDownY;
-                if (dx < -dp(36) && Math.abs(dx) > Math.abs(dy) * 1.35f) {
-                    openDrawer();
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent event) {
+            if (drawerOpen) {
+                return super.onInterceptTouchEvent(event);
+            }
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    drawerDownX = event.getRawX();
+                    drawerDownY = event.getRawY();
+                    drawerSwiping = false;
+                    drawerOpening = false;
+                    break;
+                case MotionEvent.ACTION_MOVE:
+                    float dx = event.getRawX() - drawerDownX;
+                    float dy = event.getRawY() - drawerDownY;
+                    if (!drawerSwiping && dx < -dp(18) && Math.abs(dx) > Math.abs(dy) * 1.25f) {
+                        beginDrawerOpenDrag();
+                        drawerSwiping = true;
+                        drawerOpening = true;
+                        updateDrawerOpenDrag(dx);
+                        return true;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return super.onInterceptTouchEvent(event);
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!drawerOpening) {
+                return super.onTouchEvent(event);
+            }
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_MOVE:
+                    updateDrawerOpenDrag(event.getRawX() - drawerDownX);
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    finishDrawerOpenDrag(event.getRawX() - drawerDownX);
+                    drawerOpening = false;
                     drawerSwiping = false;
                     return true;
-                }
-                break;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
-                drawerSwiping = false;
-                return false;
-            default:
-                break;
+                default:
+                    return true;
+            }
         }
-        return false;
+
+        @Override
+        public boolean dispatchTouchEvent(MotionEvent event) {
+            if (drawerOpening) {
+                return onTouchEvent(event);
+            }
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    drawerSwiping = false;
+                    drawerOpening = false;
+                    break;
+                default:
+                    break;
+            }
+            return super.dispatchTouchEvent(event);
+        }
+    }
+
+    private void beginDrawerOpenDrag() {
+        if (drawerPanel == null || drawerScrim == null) {
+            return;
+        }
+        drawerScrim.animate().cancel();
+        drawerPanel.animate().cancel();
+        drawerScrim.setVisibility(View.VISIBLE);
+        drawerPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void updateDrawerOpenDrag(float dx) {
+        if (drawerPanel == null || drawerScrim == null) {
+            return;
+        }
+        int panelWidth = drawerPanel.getWidth() > 0
+                ? drawerPanel.getWidth()
+                : Math.round(getResources().getDisplayMetrics().widthPixels * 5f / 6f);
+        float drag = Math.min(panelWidth, Math.max(0f, -dx));
+        float translation = panelWidth - drag;
+        drawerPanel.setTranslationX(translation);
+        drawerScrim.setAlpha(Math.min(1f, drag / Math.max(1, panelWidth)));
+    }
+
+    private void finishDrawerOpenDrag(float dx) {
+        if (drawerPanel == null) {
+            return;
+        }
+        int panelWidth = drawerPanel.getWidth() > 0
+                ? drawerPanel.getWidth()
+                : Math.round(getResources().getDisplayMetrics().widthPixels * 5f / 6f);
+        float opened = Math.min(panelWidth, Math.max(0f, -dx));
+        if (opened > Math.max(dp(90), panelWidth * 0.22f)) {
+            openDrawer();
+        } else {
+            drawerOpen = true;
+            closeDrawer();
+        }
     }
 
     private boolean handleDrawerSwipe(MotionEvent event) {
@@ -436,6 +506,74 @@ public class MainActivity extends Activity {
                 return true;
             default:
                 return true;
+        }
+    }
+
+    private final class DrawerPanelLayout extends LinearLayout {
+        DrawerPanelLayout(Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean onInterceptTouchEvent(MotionEvent event) {
+            if (!drawerOpen) {
+                return super.onInterceptTouchEvent(event);
+            }
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    drawerDownX = event.getRawX();
+                    drawerDownY = event.getRawY();
+                    drawerSwiping = false;
+                    animate().cancel();
+                    if (drawerScrim != null) {
+                        drawerScrim.animate().cancel();
+                    }
+                    return super.onInterceptTouchEvent(event);
+                case MotionEvent.ACTION_MOVE:
+                    float dx = Math.max(0f, event.getRawX() - drawerDownX);
+                    float dy = event.getRawY() - drawerDownY;
+                    if (!drawerSwiping && dx > dp(14) && dx > Math.abs(dy) * 1.2f) {
+                        drawerSwiping = true;
+                    }
+                    return drawerSwiping || super.onInterceptTouchEvent(event);
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    drawerSwiping = false;
+                    return super.onInterceptTouchEvent(event);
+                default:
+                    return super.onInterceptTouchEvent(event);
+            }
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!drawerOpen) {
+                return super.onTouchEvent(event);
+            }
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_MOVE:
+                    float dx = Math.max(0f, event.getRawX() - drawerDownX);
+                    setTranslationX(dx * 0.9f);
+                    if (drawerScrim != null) {
+                        drawerScrim.setAlpha(Math.max(0f, 1f - dx / Math.max(1, getWidth())));
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    drawerSwiping = false;
+                    float releaseDx = event.getRawX() - drawerDownX;
+                    if (releaseDx > Math.max(dp(90), getWidth() * 0.22f)) {
+                        closeDrawer();
+                    } else {
+                        animate().translationX(0f).setDuration(140).start();
+                        if (drawerScrim != null) {
+                            drawerScrim.animate().alpha(1f).setDuration(140).start();
+                        }
+                    }
+                    return true;
+                default:
+                    return true;
+            }
         }
     }
 
