@@ -558,6 +558,47 @@ public class LockActivity extends Activity {
         refreshTodos();
     }
 
+    private void animateDeleteTodo(TodoItem item, int index, View rowView) {
+        rowView.setEnabled(false);
+        int rowPosition = todoList.indexOfChild(rowView);
+        View dividerView = rowPosition >= 0 && rowPosition + 1 < todoList.getChildCount()
+                ? todoList.getChildAt(rowPosition + 1)
+                : null;
+        int rowHeight = rowView.getHeight() > 0 ? rowView.getHeight() : dp(54);
+        int dividerHeight = dividerView != null && dividerView.getHeight() > 0 ? dividerView.getHeight() : dp(24);
+
+        rowView.animate()
+                .translationX(rowView.getWidth() * 0.8f)
+                .alpha(0f)
+                .setDuration(150)
+                .start();
+        if (dividerView != null) {
+            dividerView.animate()
+                    .alpha(0f)
+                    .translationY(-dp(4))
+                    .setDuration(150)
+                    .start();
+        }
+
+        ValueAnimator collapse = ValueAnimator.ofFloat(1f, 0f);
+        collapse.setStartDelay(70);
+        collapse.setDuration(190);
+        collapse.addUpdateListener(animation -> {
+            float value = (Float) animation.getAnimatedValue();
+            setViewHeight(rowView, Math.round(rowHeight * value));
+            if (dividerView != null) {
+                setViewHeight(dividerView, Math.round(dividerHeight * value));
+            }
+        });
+        collapse.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                deleteTodo(item, index);
+            }
+        });
+        collapse.start();
+    }
+
     private void undoDelete() {
         if (lastDeletedItem == null) {
             return;
@@ -614,6 +655,12 @@ public class LockActivity extends Activity {
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) inputBlock.getLayoutParams();
         params.height = height;
         inputBlock.setLayoutParams(params);
+    }
+
+    private void setViewHeight(View view, int height) {
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) view.getLayoutParams();
+        params.height = height;
+        view.setLayoutParams(params);
     }
 
     private void animateInputBlockHeight(int fromHeight, int toHeight, long duration, Runnable endAction) {
@@ -1009,7 +1056,7 @@ public class LockActivity extends Activity {
                     } else {
                         actionHint.setText("\uc0ad\uc81c");
                         actionHint.setTextColor(0xFFFFB3A8);
-                        animateThen(rowView, rowView.getWidth(), () -> deleteTodo(item, index));
+                        animateDeleteTodo(item, index, rowView);
                     }
                     return true;
                 case MotionEvent.ACTION_CANCEL:
