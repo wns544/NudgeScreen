@@ -483,8 +483,7 @@ public class LockActivity extends Activity {
 
         SwipeActionListener swipeActionListener = new SwipeActionListener(item, index, row, hint);
         label.setOnTouchListener(swipeActionListener);
-        View.OnClickListener clickListener = v -> handleTodoTap(item);
-        label.setOnClickListener(clickListener);
+        label.setOnClickListener(v -> handleTodoTap(item));
         return row;
     }
 
@@ -520,24 +519,20 @@ public class LockActivity extends Activity {
         }
         int targetIndex = Math.max(0, dragPreviewIndex);
         View row = draggingTodoRow;
-        row.animate()
-                .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .alpha(1f)
-                .setDuration(150)
-                .withEndAction(() -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        row.setElevation(0f);
-                    }
-                    clearReorderPreview();
-                    if (targetIndex != draggingTodoIndex) {
-                        TodoStore.move(LockActivity.this, item.id, targetIndex);
-                        refreshTodos();
-                    }
-                    resetTodoDragState();
-                })
-                .start();
+        row.animate().cancel();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            row.setElevation(0f);
+        }
+        clearReorderPreview();
+        if (targetIndex != draggingTodoIndex) {
+            TodoStore.move(LockActivity.this, item.id, targetIndex);
+        }
+        row.setTranslationY(0f);
+        row.setScaleX(1f);
+        row.setScaleY(1f);
+        row.setAlpha(1f);
+        resetTodoDragState();
+        refreshTodos();
     }
 
     private void cancelTodoDrag() {
@@ -644,8 +639,6 @@ public class LockActivity extends Activity {
         uiHandler.postAtTime(() -> {
             if (pendingTapItemId == item.id) {
                 pendingTapItemId = -1L;
-                TodoStore.setDone(this, item.id, !item.done);
-                refreshTodos();
             }
         }, item.id, now + TODO_DOUBLE_TAP_MS);
     }
@@ -1010,16 +1003,16 @@ public class LockActivity extends Activity {
             float shackleLeft = cx - dp(5);
             float shackleRight = cx + dp(5);
             if (locked) {
-                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(5), 200, 140, false, paint);
-                canvas.drawLine(shackleLeft + dp(1), top + dp(1), shackleLeft + dp(1), top + dp(3), paint);
-                canvas.drawLine(shackleRight - dp(1), top + dp(1), shackleRight - dp(1), top + dp(3), paint);
+                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(4), 200, 140, false, paint);
+                canvas.drawLine(shackleLeft + dp(1), top - dp(1), shackleLeft + dp(1), top, paint);
+                canvas.drawLine(shackleRight - dp(1), top - dp(1), shackleRight - dp(1), top, paint);
             } else {
                 canvas.save();
                 canvas.rotate(-24f, cx + dp(2), top - dp(3));
                 float openLeft = shackleLeft + dp(3);
                 float openRight = shackleRight + dp(3);
                 canvas.drawArc(openLeft, shackleTop - dp(1), openRight, shackleBottom + dp(4), 205, 130, false, paint);
-                canvas.drawLine(openLeft + dp(1), top, openLeft + dp(1), top + dp(2), paint);
+                canvas.drawLine(openLeft + dp(1), top - dp(1), openLeft + dp(1), top, paint);
                 canvas.restore();
             }
         }
