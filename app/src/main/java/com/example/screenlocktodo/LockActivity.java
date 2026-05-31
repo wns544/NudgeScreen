@@ -273,7 +273,7 @@ public class LockActivity extends Activity {
         plusButton.setOnClickListener(v -> toggleInput());
         root.addView(plusButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(48)
+                dp(52)
         ));
 
         inputBlock = new LinearLayout(this);
@@ -1110,7 +1110,7 @@ public class LockActivity extends Activity {
     private LinearLayout.LayoutParams compactDividerParams() {
         return new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(14)
+                dp(16)
         );
     }
 
