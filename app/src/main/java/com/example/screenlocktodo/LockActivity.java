@@ -592,6 +592,8 @@ public class LockActivity extends Activity {
                 .rotation(45f)
                 .alpha(0.9f)
                 .translationY(-dp(2))
+                .scaleX(1.32f)
+                .scaleY(1.32f)
                 .setDuration(160)
                 .start();
     }
@@ -605,6 +607,8 @@ public class LockActivity extends Activity {
                 .rotation(0f)
                 .alpha(1f)
                 .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
                 .setDuration(150)
                 .start();
     }
