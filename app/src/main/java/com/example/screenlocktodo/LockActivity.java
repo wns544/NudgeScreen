@@ -616,7 +616,7 @@ public class LockActivity extends Activity {
     }
 
     private int dragTargetIndex(float rawY) {
-        int fallback = draggingTodoIndex;
+        int itemCount = Math.max(0, (todoList.getChildCount() + 1) / 2);
         for (int i = 0; i < todoList.getChildCount(); i += 2) {
             View row = todoList.getChildAt(i);
             Object tag = row.getTag();
@@ -630,9 +630,8 @@ public class LockActivity extends Activity {
             if (rawY < middle) {
                 return rowIndex;
             }
-            fallback = rowIndex;
         }
-        return Math.max(0, fallback);
+        return Math.max(0, itemCount - 1);
     }
 
     private int indexOfTodoRow(View row) {
