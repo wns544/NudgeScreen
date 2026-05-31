@@ -147,7 +147,6 @@ public class MainActivity extends Activity {
         root.addView(hero());
         root.addView(lockSettingsCard(), cardParams());
         root.addView(todoCard(), cardParams());
-        root.addView(actionCard(), cardParams());
 
         shell.addView(scroll, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -179,7 +178,6 @@ public class MainActivity extends Activity {
 
         TextView menu = text("\u2630", 22, COLOR_INK, false);
         menu.setGravity(Gravity.CENTER);
-        menu.setBackground(rounded(COLOR_FIELD, 8));
         menu.setOnClickListener(v -> openDrawer());
         titleRow.addView(menu, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
@@ -290,17 +288,6 @@ public class MainActivity extends Activity {
         todoList.setOrientation(LinearLayout.VERTICAL);
         todoList.setPadding(0, dp(4), 0, 0);
         card.addView(todoList);
-
-        return card;
-    }
-
-    private View actionCard() {
-        LinearLayout card = card();
-        card.addView(sectionTitle("\uc571", null));
-
-        card.addView(actionRow("\ubbf8\ub9ac\ubcf4\uae30", v -> startActivity(new Intent(this, LockActivity.class)), true));
-        card.addView(actionRow("\uc54c\ub9bc \uad8c\ud55c", v -> openNotificationSettings(), false));
-        card.addView(actionRow("\ubc30\ud130\ub9ac \uc124\uc815", v -> openBatterySettings(), false));
 
         return card;
     }
