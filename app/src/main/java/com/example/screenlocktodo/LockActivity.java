@@ -273,7 +273,7 @@ public class LockActivity extends Activity {
         plusButton.setOnClickListener(v -> toggleInput());
         root.addView(plusButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(56)
+                dp(82)
         ));
 
         inputBlock = new LinearLayout(this);
@@ -321,7 +321,7 @@ public class LockActivity extends Activity {
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
         todoList.setGravity(Gravity.CENTER_HORIZONTAL);
-        todoList.setPadding(0, 0, 0, dp(18));
+        todoList.setPadding(0, dp(11), 0, dp(18));
         todoList.setLayoutTransition(new android.animation.LayoutTransition());
         root.addView(todoList, narrowParams());
 
