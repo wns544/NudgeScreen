@@ -26,6 +26,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
 
@@ -60,7 +61,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         configureMainWindow();
         requestNotificationPermission();
-        LockMonitorService.start(this);
+        syncLockMonitorService();
         registerBackHandler();
         setContentView(buildContent());
         refreshTodos();
@@ -69,19 +70,19 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        LockMonitorService.start(getApplicationContext());
+        syncLockMonitorService();
         refreshTodos();
     }
 
     @Override
     protected void onStop() {
-        LockMonitorService.start(getApplicationContext());
+        syncLockMonitorService();
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
-        LockMonitorService.start(getApplicationContext());
+        syncLockMonitorService();
         super.onDestroy();
     }
 
@@ -112,6 +113,14 @@ public class MainActivity extends Activity {
             finishAndRemoveTask();
         } else {
             finish();
+        }
+    }
+
+    private void syncLockMonitorService() {
+        if (AppSettings.lockScreenEnabled(this)) {
+            LockMonitorService.start(getApplicationContext());
+        } else {
+            LockMonitorService.stop(getApplicationContext());
         }
     }
 
@@ -190,7 +199,7 @@ public class MainActivity extends Activity {
         chips.setOrientation(LinearLayout.HORIZONTAL);
         chips.setGravity(Gravity.LEFT);
         chips.setPadding(0, dp(12), 0, 0);
-        chips.addView(chip("\uc2e4\ud589 \uc911", 0x267FA88A, COLOR_GREEN));
+        chips.addView(chip(AppSettings.lockScreenEnabled(this) ? "\uc2e4\ud589 \uc911" : "\uc77c\uc2dc\uc911\uc9c0", 0x267FA88A, COLOR_GREEN));
         TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? "\uc88c\uc6b0 \ucee4\ud2bc" : "\uc624\ub978\ucabd \ucee4\ud2bc", 0x266E8FBF, COLOR_ACCENT);
         LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -207,10 +216,40 @@ public class MainActivity extends Activity {
         LinearLayout card = card();
         card.addView(sectionTitle("\uc7a0\uae08\ud654\uba74", null));
 
+        LinearLayout enabledRow = new LinearLayout(this);
+        enabledRow.setGravity(Gravity.CENTER_VERTICAL);
+        enabledRow.setOrientation(LinearLayout.HORIZONTAL);
+        enabledRow.setPadding(0, dp(14), 0, dp(8));
+
+        LinearLayout enabledCopy = new LinearLayout(this);
+        enabledCopy.setOrientation(LinearLayout.VERTICAL);
+        TextView enabledTitle = text("\uc7a0\uae08\ud654\uba74 \uc0ac\uc6a9", 16, COLOR_INK, false);
+        TextView enabledSubtitle = text("\ud654\uba74\uc744 \ucf30 \ub54c \ud560 \uc77c \ucee4\ud2bc\uc744 \ub744\uc6c1\ub2c8\ub2e4.", 13, COLOR_MUTED, false);
+        enabledSubtitle.setPadding(0, dp(3), dp(10), 0);
+        enabledCopy.addView(enabledTitle);
+        enabledCopy.addView(enabledSubtitle);
+        enabledRow.addView(enabledCopy, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+        Switch enabledSwitch = new Switch(this);
+        enabledSwitch.setChecked(AppSettings.lockScreenEnabled(this));
+        enabledSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            AppSettings.setLockScreenEnabled(MainActivity.this, isChecked);
+            syncLockMonitorService();
+            setContentView(buildContent());
+            refreshTodos();
+        });
+        enabledRow.addView(enabledSwitch, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+        card.addView(enabledRow);
+
+        card.addView(divider());
+
         LinearLayout opacityHeader = new LinearLayout(this);
         opacityHeader.setGravity(Gravity.CENTER_VERTICAL);
         opacityHeader.setOrientation(LinearLayout.HORIZONTAL);
-        opacityHeader.setPadding(0, dp(16), 0, 0);
+        opacityHeader.setPadding(0, dp(12), 0, 0);
         opacityHeader.addView(text("\ubc30\uacbd \uc5b4\ub461\uae30", 16, COLOR_INK, false),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
         opacityValue = text(AppSettings.overlayOpacity(this) + "%", 16, COLOR_ACCENT, false);

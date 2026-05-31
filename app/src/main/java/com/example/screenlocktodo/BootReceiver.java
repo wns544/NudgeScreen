@@ -15,9 +15,13 @@ public class BootReceiver extends BroadcastReceiver {
                 || "android.intent.action.QUICKBOOT_POWERON".equals(action)
                 || "com.htc.intent.action.QUICKBOOT_POWERON".equals(action)
                 || LockMonitorService.ACTION_RESTART_MONITOR.equals(action)) {
-            LockMonitorService.start(context);
-            LockMonitorService.scheduleRestart(context, 5000);
-            LockMonitorService.scheduleRestart(context, 30000);
+            if (AppSettings.lockScreenEnabled(context)) {
+                LockMonitorService.start(context);
+                LockMonitorService.scheduleRestart(context, 5000);
+                LockMonitorService.scheduleRestart(context, 30000);
+            } else {
+                LockMonitorService.stop(context);
+            }
         }
     }
 }

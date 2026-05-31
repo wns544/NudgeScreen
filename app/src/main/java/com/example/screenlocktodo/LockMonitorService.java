@@ -29,6 +29,10 @@ public class LockMonitorService extends Service {
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (!AppSettings.lockScreenEnabled(context)) {
+                LockMonitorService.stop(context);
+                return;
+            }
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                 cancelLockNotification(context);
@@ -42,6 +46,11 @@ public class LockMonitorService extends Service {
     private boolean registered;
 
     public static void start(Context context) {
+        if (!AppSettings.lockScreenEnabled(context)) {
+            stop(context);
+            return;
+        }
+
         Intent intent = new Intent(context, LockMonitorService.class);
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -54,7 +63,18 @@ public class LockMonitorService extends Service {
         }
     }
 
+    public static void stop(Context context) {
+        cancelScheduledRestarts(context);
+        cancelLockNotification(context);
+        cancelServiceNotification(context);
+        context.stopService(new Intent(context, LockMonitorService.class));
+    }
+
     static void scheduleRestart(Context context, long delayMillis) {
+        if (!AppSettings.lockScreenEnabled(context)) {
+            return;
+        }
+
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(ALARM_SERVICE);
         if (alarmManager == null) {
             return;
@@ -79,6 +99,10 @@ public class LockMonitorService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        if (!AppSettings.lockScreenEnabled(this)) {
+            stopSelf();
+            return;
+        }
         createNotificationChannels();
         registerScreenReceiver();
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
@@ -88,6 +112,12 @@ public class LockMonitorService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (!AppSettings.lockScreenEnabled(this)) {
+            cancelLockNotification(this);
+            cancelServiceNotification(this);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         createNotificationChannels();
         registerScreenReceiver();
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
@@ -102,14 +132,18 @@ public class LockMonitorService extends Service {
             unregisterReceiver(screenReceiver);
             registered = false;
         }
-        scheduleRestart(1200);
+        if (AppSettings.lockScreenEnabled(this)) {
+            scheduleRestart(1200);
+        }
         super.onDestroy();
     }
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        scheduleRestart(700);
-        scheduleRestart(5000);
+        if (AppSettings.lockScreenEnabled(this)) {
+            scheduleRestart(700);
+            scheduleRestart(5000);
+        }
         super.onTaskRemoved(rootIntent);
     }
 
@@ -153,6 +187,41 @@ public class LockMonitorService extends Service {
         }
     }
 
+    private static void cancelServiceNotification(Context context) {
+        NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.cancel(SERVICE_NOTIFICATION_ID);
+        }
+    }
+
+    private static void cancelScheduledRestarts(Context context) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(ALARM_SERVICE);
+        if (alarmManager == null) {
+            return;
+        }
+
+        cancelScheduledRestart(context, alarmManager, 700);
+        cancelScheduledRestart(context, alarmManager, 1200);
+        cancelScheduledRestart(context, alarmManager, 5000);
+        cancelScheduledRestart(context, alarmManager, 30000);
+    }
+
+    private static void cancelScheduledRestart(Context context, AlarmManager alarmManager, long delayMillis) {
+        Intent restartIntent = new Intent(context, BootReceiver.class)
+                .setAction(ACTION_RESTART_MONITOR)
+                .setPackage(context.getPackageName());
+        PendingIntent restartPendingIntent = PendingIntent.getBroadcast(
+                context,
+                (int) Math.max(1, Math.min(100000, delayMillis)),
+                restartIntent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+        );
+        if (restartPendingIntent != null) {
+            alarmManager.cancel(restartPendingIntent);
+            restartPendingIntent.cancel();
+        }
+    }
+
     private Notification buildServiceNotification() {
         PendingIntent contentIntent = PendingIntent.getActivity(
                 this,
@@ -174,6 +243,11 @@ public class LockMonitorService extends Service {
     }
 
     private void showLockScreen(Context context, boolean wakeDisplay, boolean allowBeforeKeyguard, boolean allowNotificationFallback) {
+        if (!AppSettings.lockScreenEnabled(context)) {
+            LockMonitorService.stop(context);
+            return;
+        }
+
         if (!allowBeforeKeyguard && !isKeyguardLocked(context)) {
             return;
         }

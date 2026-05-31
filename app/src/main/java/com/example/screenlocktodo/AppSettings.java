@@ -6,11 +6,20 @@ import android.os.Build;
 
 final class AppSettings {
     private static final String PREFS = "todo_lock_settings";
+    private static final String KEY_LOCK_SCREEN_ENABLED = "lock_screen_enabled";
     private static final String KEY_OVERLAY_OPACITY = "overlay_opacity";
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
     private static final int DEFAULT_OVERLAY_OPACITY = 40;
 
     private AppSettings() {
+    }
+
+    static boolean lockScreenEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_LOCK_SCREEN_ENABLED, true);
+    }
+
+    static void setLockScreenEnabled(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_LOCK_SCREEN_ENABLED, value).apply();
     }
 
     static int overlayOpacity(Context context) {
