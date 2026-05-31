@@ -66,6 +66,9 @@ public class LockActivity extends Activity {
     private int dragPreviewIndex = -1;
     private View draggingTodoRow;
     private float draggingTodoStartCenterY;
+    private float draggingTouchToCenterOffset;
+    private View draggingPreviousDivider;
+    private View draggingNextDivider;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
     private ValueAnimator inputBlockHeightAnimator;
@@ -498,6 +501,8 @@ public class LockActivity extends Activity {
         int[] location = new int[2];
         row.getLocationOnScreen(location);
         draggingTodoStartCenterY = location[1] + row.getHeight() * 0.5f;
+        draggingTouchToCenterOffset = draggingTodoStartCenterY - rawY;
+        hideDraggedTodoDividers(row);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             row.setElevation(dp(6));
         }
@@ -508,10 +513,11 @@ public class LockActivity extends Activity {
         if (draggingTodoRow == null || draggingTodoIndex < 0) {
             return;
         }
-        float translationY = rawY - draggingTodoStartCenterY;
+        float draggedCenterY = rawY + draggingTouchToCenterOffset;
+        float translationY = draggedCenterY - draggingTodoStartCenterY;
         draggingTodoRow.setTranslationY(translationY);
 
-        int targetIndex = dragTargetIndex(rawY);
+        int targetIndex = dragTargetIndex(draggedCenterY);
         updateReorderPreview(targetIndex);
     }
 
@@ -540,6 +546,7 @@ public class LockActivity extends Activity {
                         moveTodoViews(draggingTodoIndex, targetIndex);
                     }
                     clearReorderPreviewImmediately();
+                    restoreDraggedTodoDividers();
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         row.setElevation(0f);
                     }
@@ -570,6 +577,7 @@ public class LockActivity extends Activity {
                     .start();
         }
         clearReorderPreview();
+        restoreDraggedTodoDividers();
         resetTodoDragState();
     }
 
@@ -579,6 +587,32 @@ public class LockActivity extends Activity {
         dragPreviewIndex = -1;
         draggingTodoRow = null;
         draggingTodoStartCenterY = 0f;
+        draggingTouchToCenterOffset = 0f;
+        draggingPreviousDivider = null;
+        draggingNextDivider = null;
+    }
+
+    private void hideDraggedTodoDividers(View row) {
+        int rowPosition = todoList.indexOfChild(row);
+        draggingPreviousDivider = rowPosition > 0 ? todoList.getChildAt(rowPosition - 1) : null;
+        draggingNextDivider = rowPosition + 1 < todoList.getChildCount()
+                ? todoList.getChildAt(rowPosition + 1)
+                : null;
+        setDividerVisibilityDuringDrag(draggingPreviousDivider, 0f);
+        setDividerVisibilityDuringDrag(draggingNextDivider, 0f);
+    }
+
+    private void restoreDraggedTodoDividers() {
+        setDividerVisibilityDuringDrag(draggingPreviousDivider, 1f);
+        setDividerVisibilityDuringDrag(draggingNextDivider, 1f);
+    }
+
+    private void setDividerVisibilityDuringDrag(View divider, float alpha) {
+        if (divider == null || divider == draggingTodoRow) {
+            return;
+        }
+        divider.animate().cancel();
+        divider.setAlpha(alpha);
     }
 
     private int dragTargetIndex(float rawY) {
