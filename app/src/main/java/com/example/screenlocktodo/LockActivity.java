@@ -41,6 +41,7 @@ public class LockActivity extends Activity {
 
     private LinearLayout todoList;
     private LinearLayout inputRow;
+    private TextView inputDivider;
     private EditText input;
     private View plusButton;
     private TextView timeText;
@@ -271,6 +272,13 @@ public class LockActivity extends Activity {
             return false;
         });
         inputRow.addView(input, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46)));
+
+        inputDivider = text("\u2013", 16, 0x66FFFFFF, false);
+        inputDivider.setGravity(Gravity.CENTER);
+        inputDivider.setVisibility(View.GONE);
+        inputDivider.setAlpha(0f);
+        inputDivider.setTranslationY(-dp(6));
+        root.addView(inputDivider, fullWidthWrap());
 
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
@@ -559,9 +567,17 @@ public class LockActivity extends Activity {
         }
         animatePlusOpen();
         inputRow.animate().cancel();
+        inputDivider.animate().cancel();
         inputRow.setVisibility(View.VISIBLE);
+        inputDivider.setVisibility(View.VISIBLE);
         inputRow.setTranslationY(-dp(6));
+        inputDivider.setTranslationY(-dp(6));
         inputRow.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(170)
+                .start();
+        inputDivider.animate()
                 .alpha(1f)
                 .translationY(0f)
                 .setDuration(170)
@@ -575,6 +591,12 @@ public class LockActivity extends Activity {
 
     private void hideInput() {
         animatePlusClosed();
+        inputDivider.animate()
+                .alpha(0f)
+                .translationY(-dp(8))
+                .setDuration(140)
+                .withEndAction(() -> inputDivider.setVisibility(View.GONE))
+                .start();
         inputRow.animate()
                 .alpha(0f)
                 .translationY(-dp(8))
@@ -734,6 +756,7 @@ public class LockActivity extends Activity {
                     curtainSwiping = false;
                     curtainBlocked = (!todosLocked && isInside(todoList, event))
                             || isInside(inputRow, event)
+                            || isInside(inputDivider, event)
                             || isInside(menuButton, event)
                             || isInside(menuPanel, event);
                     animate().cancel();
