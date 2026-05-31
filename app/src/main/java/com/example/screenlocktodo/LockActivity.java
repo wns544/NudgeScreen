@@ -626,8 +626,10 @@ public class LockActivity extends Activity {
             View row = todoList.getChildAt(i);
             int[] location = new int[2];
             row.getLocationOnScreen(location);
-            float middle = location[1] + row.getHeight() * 0.5f;
             int rowIndex = i / 2;
+            float middle = row == draggingTodoRow
+                    ? draggingTodoStartCenterY
+                    : location[1] + row.getHeight() * 0.5f - row.getTranslationY();
             float distance = Math.abs(rawY - middle);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
