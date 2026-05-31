@@ -28,6 +28,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.window.OnBackInvokedDispatcher;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -77,8 +78,24 @@ public class LockActivity extends Activity {
         configureLockWindow();
         super.onCreate(savedInstanceState);
         LockMonitorService.cancelLockNotification(this);
+        registerBackHandler();
         setContentView(buildContent());
         refreshTodos();
+    }
+
+    @Override
+    public void onBackPressed() {
+        // The curtain is dismissed only by the unlock swipe, not by system back.
+    }
+
+    private void registerBackHandler() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    () -> {
+                    }
+            );
+        }
     }
 
     @Override
