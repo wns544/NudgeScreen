@@ -63,6 +63,9 @@ public class LockActivity extends Activity {
     private int lastDeletedIndex = -1;
     private boolean todosLocked;
     private long pendingTapItemId = -1L;
+    private long draggingTodoId = -1L;
+    private int draggingTodoIndex = -1;
+    private int dragPreviewIndex = -1;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
     private ValueAnimator inputBlockHeightAnimator;
@@ -488,6 +491,9 @@ public class LockActivity extends Activity {
     }
 
     private boolean startTodoDrag(View row, TodoItem item) {
+        draggingTodoId = item.id;
+        draggingTodoIndex = indexOfTodoRow(row);
+        dragPreviewIndex = draggingTodoIndex;
         row.animate().scaleX(1.04f).scaleY(1.04f).alpha(0.82f).setDuration(120).start();
         ClipData data = ClipData.newPlainText("todo_id", String.valueOf(item.id));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -505,21 +511,74 @@ public class LockActivity extends Activity {
         }
         switch (event.getAction()) {
             case DragEvent.ACTION_DRAG_ENTERED:
-                row.animate().translationY(dp(5)).setDuration(90).start();
+                updateReorderPreview(targetIndex);
                 return true;
             case DragEvent.ACTION_DRAG_EXITED:
-                row.animate().translationY(0f).setDuration(90).start();
                 return true;
             case DragEvent.ACTION_DROP:
+                clearReorderPreview();
                 TodoStore.move(this, (Long) localState, targetIndex);
                 refreshTodos();
                 return true;
             case DragEvent.ACTION_DRAG_ENDED:
+                clearReorderPreview();
+                draggingTodoId = -1L;
+                draggingTodoIndex = -1;
+                dragPreviewIndex = -1;
                 row.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(120).start();
                 return true;
             default:
                 return true;
         }
+    }
+
+    private int indexOfTodoRow(View row) {
+        int rowPosition = todoList.indexOfChild(row);
+        return rowPosition < 0 ? -1 : rowPosition / 2;
+    }
+
+    private void updateReorderPreview(int targetIndex) {
+        if (draggingTodoIndex < 0 || targetIndex == dragPreviewIndex) {
+            return;
+        }
+        dragPreviewIndex = targetIndex;
+        int offset = todoMoveOffset();
+        for (int i = 0; i < todoList.getChildCount(); i += 2) {
+            View row = todoList.getChildAt(i);
+            Object tag = row.getTag();
+            if (tag instanceof Long && (Long) tag == draggingTodoId) {
+                continue;
+            }
+            int rowIndex = i / 2;
+            float translation = 0f;
+            if (targetIndex > draggingTodoIndex && rowIndex > draggingTodoIndex && rowIndex <= targetIndex) {
+                translation = -offset;
+            } else if (targetIndex < draggingTodoIndex && rowIndex >= targetIndex && rowIndex < draggingTodoIndex) {
+                translation = offset;
+            }
+            row.animate().translationY(translation).setDuration(150).start();
+            if (i + 1 < todoList.getChildCount()) {
+                todoList.getChildAt(i + 1).animate().translationY(translation).setDuration(150).start();
+            }
+        }
+    }
+
+    private void clearReorderPreview() {
+        for (int i = 0; i < todoList.getChildCount(); i++) {
+            todoList.getChildAt(i).animate().translationY(0f).setDuration(120).start();
+        }
+    }
+
+    private int todoMoveOffset() {
+        int rowHeight = dp(54);
+        int dividerHeight = dp(24);
+        if (todoList.getChildCount() > 0 && todoList.getChildAt(0).getHeight() > 0) {
+            rowHeight = todoList.getChildAt(0).getHeight();
+        }
+        if (todoList.getChildCount() > 1 && todoList.getChildAt(1).getHeight() > 0) {
+            dividerHeight = todoList.getChildAt(1).getHeight();
+        }
+        return rowHeight + dividerHeight;
     }
 
     private void handleTodoTap(TodoItem item) {
