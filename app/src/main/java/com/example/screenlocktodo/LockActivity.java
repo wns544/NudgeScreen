@@ -45,7 +45,7 @@ public class LockActivity extends Activity {
     private LinearLayout inputRow;
     private TextView inputDivider;
     private EditText input;
-    private View plusButton;
+    private PlusButtonView plusButton;
     private TextView timeText;
     private TextView meridiemText;
     private TextView dateText;
@@ -707,12 +707,10 @@ public class LockActivity extends Activity {
             return;
         }
         plusButton.animate().cancel();
+        plusButton.animateOpen();
         plusButton.animate()
-                .rotation(45f)
                 .alpha(0.9f)
                 .translationY(-dp(2))
-                .scaleX(1.32f)
-                .scaleY(1.32f)
                 .setDuration(160)
                 .start();
     }
@@ -722,18 +720,18 @@ public class LockActivity extends Activity {
             return;
         }
         plusButton.animate().cancel();
+        plusButton.animateClosed();
         plusButton.animate()
-                .rotation(0f)
                 .alpha(1f)
                 .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
                 .setDuration(150)
                 .start();
     }
 
     private final class PlusButtonView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private ValueAnimator iconAnimator;
+        private float openProgress;
 
         PlusButtonView(Context context) {
             super(context);
@@ -756,9 +754,39 @@ public class LockActivity extends Activity {
             super.onDraw(canvas);
             float centerX = getWidth() * 0.5f;
             float centerY = getHeight() * 0.5f;
-            float halfLength = dp(9);
+            float halfLength = dp(9) * (1f + 0.4142f * openProgress);
+            canvas.save();
+            canvas.rotate(45f * openProgress, centerX, centerY);
             canvas.drawLine(centerX - halfLength, centerY, centerX + halfLength, centerY, paint);
             canvas.drawLine(centerX, centerY - halfLength, centerX, centerY + halfLength, paint);
+            canvas.restore();
+        }
+
+        void animateOpen() {
+            animateIconTo(1f, 160);
+        }
+
+        void animateClosed() {
+            animateIconTo(0f, 150);
+        }
+
+        private void animateIconTo(float target, long duration) {
+            if (iconAnimator != null) {
+                iconAnimator.cancel();
+            }
+            iconAnimator = ValueAnimator.ofFloat(openProgress, target);
+            iconAnimator.setDuration(duration);
+            iconAnimator.addUpdateListener(animation -> {
+                openProgress = (Float) animation.getAnimatedValue();
+                invalidate();
+            });
+            iconAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(android.animation.Animator animation) {
+                    iconAnimator = null;
+                }
+            });
+            iconAnimator.start();
         }
     }
 
