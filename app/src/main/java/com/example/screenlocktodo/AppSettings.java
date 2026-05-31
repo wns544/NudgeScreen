@@ -9,6 +9,7 @@ final class AppSettings {
     private static final String KEY_LOCK_SCREEN_ENABLED = "lock_screen_enabled";
     private static final String KEY_OVERLAY_OPACITY = "overlay_opacity";
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
+    private static final String KEY_BATTERY_GUIDE_SHOWN = "battery_guide_shown";
     private static final int DEFAULT_OVERLAY_OPACITY = 40;
 
     private AppSettings() {
@@ -37,6 +38,14 @@ final class AppSettings {
 
     static void setCurtainUnlockBothDirections(Context context, boolean value) {
         prefs(context).edit().putBoolean(KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS, value).apply();
+    }
+
+    static boolean batteryGuideShown(Context context) {
+        return prefs(context).getBoolean(KEY_BATTERY_GUIDE_SHOWN, false);
+    }
+
+    static void setBatteryGuideShown(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_BATTERY_GUIDE_SHOWN, value).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

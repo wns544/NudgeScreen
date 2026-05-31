@@ -2,12 +2,14 @@ package com.example.screenlocktodo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -65,6 +67,7 @@ public class MainActivity extends Activity {
         registerBackHandler();
         setContentView(buildContent());
         refreshTodos();
+        maybeShowBatteryGuideOnboarding();
     }
 
     @Override
@@ -380,9 +383,10 @@ public class MainActivity extends Activity {
             closeDrawer();
             openNotificationSettings();
         }, false));
-        drawerPanel.addView(actionRow("\ubc30\ud130\ub9ac \uc124\uc815", v -> {
+        drawerPanel.addView(drawerSectionTitle("\ud560\uc77c \ucee4\ud2bc\uc774 \uc790\uafb8 \uc885\ub8cc\ub418\ub098\uc694?"));
+        drawerPanel.addView(actionRow("\ubc30\ud130\ub9ac \uc81c\ud55c\uc5c6\uc74c \uc124\uc815\ud558\uae30", v -> {
             closeDrawer();
-            openBatterySettings();
+            showBatteryGuideDialog(false);
         }, false));
         drawerPanel.addView(actionRow("\ub2eb\uae30", v -> closeDrawer(), false));
 
@@ -767,16 +771,106 @@ public class MainActivity extends Activity {
     }
 
     private void openBatterySettings() {
-        Intent intent;
-        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        if (powerManager != null && !powerManager.isIgnoringBatteryOptimizations(getPackageName())) {
-            intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                    .setData(Uri.parse("package:" + getPackageName()));
-        } else {
-            intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        Intent intent = batteryOptimizationIntent();
+        try {
+            startActivity(intent);
+        } catch (Exception ignored) {
+            startActivity(appDetailsIntent());
+        }
+    }
+
+    private void maybeShowBatteryGuideOnboarding() {
+        if (AppSettings.batteryGuideShown(this)) {
+            return;
+        }
+        if (isBatteryUnrestricted()) {
+            AppSettings.setBatteryGuideShown(this, true);
+            return;
+        }
+        getWindow().getDecorView().post(() -> showBatteryGuideDialog(true));
+    }
+
+    private void showBatteryGuideDialog(boolean firstRun) {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(20), dp(20), dp(16));
+        box.setBackground(rounded(COLOR_PANEL, 12));
+
+        TextView title = text("\ubc30\ud130\ub9ac \uc81c\ud55c\uc5c6\uc74c\uc774 \ud544\uc694\ud574\uc694", 20, COLOR_INK, true);
+        box.addView(title);
+
+        TextView body = text(
+                "Android\uac00 \ubc30\ud130\ub9ac\ub97c \uc544\ub07c\ub824\uace0 \uc571\uc744 \uba48\ucd94\uba74 \ud654\uba74\uc744 \ucf30\uc744 \ub54c \ud560\uc77c \ucee4\ud2bc\uc774 \ub2a6\uac8c \ub728\uac70\ub098 \uc885\ub8cc\ub420 \uc218 \uc788\uc5b4\uc694. \uc124\uc815\uc5d0\uc11c \ubc30\ud130\ub9ac \uc0ac\uc6a9\ub7c9\uc744 '\uc81c\ud55c \uc5c6\uc74c'\uc73c\ub85c \ubc14\uafd4\ub450\uba74 \ub354 \uc548\uc815\uc801\uc73c\ub85c \uc791\ub3d9\ud569\ub2c8\ub2e4.",
+                15,
+                COLOR_MUTED,
+                false
+        );
+        body.setPadding(0, dp(10), 0, dp(18));
+        box.addView(body);
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button later = quietButton("\ub098\uc911\uc5d0", COLOR_MUTED);
+        later.setOnClickListener(v -> {
+            if (firstRun) {
+                AppSettings.setBatteryGuideShown(this, true);
+            }
+            dialog.dismiss();
+        });
+        buttons.addView(later, new LinearLayout.LayoutParams(dp(88), dp(44)));
+
+        Button settings = filledButton("\uc124\uc815\uc73c\ub85c \uc774\ub3d9");
+        settings.setOnClickListener(v -> {
+            if (firstRun) {
+                AppSettings.setBatteryGuideShown(this, true);
+            }
+            dialog.dismiss();
+            openBatterySettings();
+        });
+        LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(dp(132), dp(44));
+        settingsParams.leftMargin = dp(8);
+        buttons.addView(settings, settingsParams);
+        box.addView(buttons);
+
+        dialog.setContentView(box);
+        dialog.setOnCancelListener(d -> {
+            if (firstRun) {
+                AppSettings.setBatteryGuideShown(this, true);
+            }
+        });
+        dialog.show();
+
+        Window dialogWindow = dialog.getWindow();
+        if (dialogWindow != null) {
+            dialogWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
+            dialogWindow.setLayout(
+                    Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(420)),
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private Intent batteryOptimizationIntent() {
+        if (!isBatteryUnrestricted()) {
+            return new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
                     .setData(Uri.parse("package:" + getPackageName()));
         }
-        startActivity(intent);
+        return appDetailsIntent();
+    }
+
+    private Intent appDetailsIntent() {
+        return new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse("package:" + getPackageName()));
+    }
+
+    private boolean isBatteryUnrestricted() {
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        return powerManager != null && powerManager.isIgnoringBatteryOptimizations(getPackageName());
     }
 
     private boolean needsFullScreenIntentPermission() {
@@ -831,6 +925,12 @@ public class MainActivity extends Activity {
                 dp(48)
         ));
         return row;
+    }
+
+    private View drawerSectionTitle(String label) {
+        TextView title = text(label, 14, COLOR_MUTED, true);
+        title.setPadding(0, dp(20), 0, dp(4));
+        return title;
     }
 
     private TextView chip(String value, int bgColor, int textColor) {
