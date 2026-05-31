@@ -40,6 +40,9 @@ public class LockActivity extends Activity {
     private LinearLayout inputRow;
     private EditText input;
     private View plusButton;
+    private TextView timeText;
+    private TextView meridiemText;
+    private TextView dateText;
     private TextView undoButton;
     private TextView menuButton;
     private LinearLayout menuPanel;
@@ -51,6 +54,13 @@ public class LockActivity extends Activity {
     private long pendingTapItemId = -1L;
     private boolean firstTodoRender = true;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private final Runnable clockTicker = new Runnable() {
+        @Override
+        public void run() {
+            updateClock();
+            scheduleClockTick();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +77,8 @@ public class LockActivity extends Activity {
         setIntent(intent);
         configureLockWindow();
         LockMonitorService.cancelLockNotification(this);
+        updateClock();
+        scheduleClockTick();
         refreshTodos();
     }
 
@@ -74,7 +86,21 @@ public class LockActivity extends Activity {
     protected void onResume() {
         super.onResume();
         LockMonitorService.cancelLockNotification(this);
+        updateClock();
+        scheduleClockTick();
         refreshTodos();
+    }
+
+    @Override
+    protected void onPause() {
+        uiHandler.removeCallbacks(clockTicker);
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        uiHandler.removeCallbacks(clockTicker);
+        super.onDestroy();
     }
 
     private void configureLockWindow() {
@@ -190,23 +216,24 @@ public class LockActivity extends Activity {
                 ScrollView.LayoutParams.WRAP_CONTENT
         ));
 
-        Date now = new Date();
         LinearLayout timeRow = new LinearLayout(this);
         timeRow.setGravity(Gravity.CENTER);
         timeRow.setOrientation(LinearLayout.HORIZONTAL);
         root.addView(timeRow, fullWidthWrap());
 
-        TextView time = text(new SimpleDateFormat("h:mm", Locale.getDefault()).format(now), 52, 0xEFFFFFFF, false);
-        time.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-        timeRow.addView(time);
+        timeText = text("", 52, 0xEFFFFFFF, false);
+        timeText.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        timeRow.addView(timeText);
 
-        TextView meridiem = text(new SimpleDateFormat("a", Locale.ENGLISH).format(now), 13, 0xDFFFFFFF, false);
-        meridiem.setPadding(dp(5), 0, 0, dp(12));
-        timeRow.addView(meridiem);
+        meridiemText = text("", 13, 0xDFFFFFFF, false);
+        meridiemText.setPadding(dp(5), 0, 0, dp(12));
+        timeRow.addView(meridiemText);
 
-        TextView date = text(new SimpleDateFormat("EEEE, MMMM d", Locale.ENGLISH).format(now), 16, 0xCCFFFFFF, false);
-        date.setGravity(Gravity.CENTER);
-        root.addView(date, fullWidthWrap());
+        dateText = text("", 16, 0xCCFFFFFF, false);
+        dateText.setGravity(Gravity.CENTER);
+        root.addView(dateText, fullWidthWrap());
+        updateClock();
+        scheduleClockTick();
 
         plusButton = new PlusButtonView(this);
         plusButton.setOnClickListener(v -> toggleInput());
@@ -265,6 +292,23 @@ public class LockActivity extends Activity {
             return "\ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c";
         }
         return "\uc624\ub978\ucabd\uc73c\ub85c \ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c";
+    }
+
+    private void updateClock() {
+        if (timeText == null || meridiemText == null || dateText == null) {
+            return;
+        }
+        Date now = new Date();
+        timeText.setText(new SimpleDateFormat("h:mm", Locale.getDefault()).format(now));
+        meridiemText.setText(new SimpleDateFormat("a", Locale.ENGLISH).format(now));
+        dateText.setText(new SimpleDateFormat("EEEE, MMMM d", Locale.ENGLISH).format(now));
+    }
+
+    private void scheduleClockTick() {
+        uiHandler.removeCallbacks(clockTicker);
+        long now = System.currentTimeMillis();
+        long delay = 60000L - (now % 60000L) + 250L;
+        uiHandler.postDelayed(clockTicker, delay);
     }
 
     private void toggleMenu() {
