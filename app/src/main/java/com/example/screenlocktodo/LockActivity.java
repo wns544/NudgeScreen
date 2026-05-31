@@ -2,7 +2,7 @@ package com.example.screenlocktodo;
 
 import android.animation.ValueAnimator;
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.Dialog;
 import android.app.KeyguardManager;
 import android.content.BroadcastReceiver;
 import android.content.ClipData;
@@ -13,6 +13,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,6 +41,7 @@ import java.util.Locale;
 
 public class LockActivity extends Activity {
     static final String EXTRA_TURN_SCREEN_ON = "com.example.screenlocktodo.TURN_SCREEN_ON";
+    private static final long TODO_DOUBLE_TAP_MS = 420L;
 
     private LinearLayout todoList;
     private LinearLayout inputBlock;
@@ -521,38 +523,86 @@ public class LockActivity extends Activity {
                 TodoStore.setDone(this, item.id, !item.done);
                 refreshTodos();
             }
-        }, item.id, now + 280);
+        }, item.id, now + TODO_DOUBLE_TAP_MS);
     }
 
     private void showEditTodoDialog(TodoItem item) {
+        Dialog dialog = new Dialog(this);
+
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(22), dp(20), dp(22), dp(16));
+        panel.setBackground(rounded(0xEE171717, dp(18)));
+
+        TextView title = text("\ud560\uc77c \uc218\uc815", 17, 0xF2FFFFFF, true);
+        title.setGravity(Gravity.CENTER);
+        panel.addView(title, fullWidthWrap());
+
         EditText editor = new EditText(this);
         editor.setSingleLine(false);
         editor.setText(item.text);
         editor.setSelectAllOnFocus(false);
-        editor.setTextColor(0xFF111111);
-        editor.setHintTextColor(0xFF777777);
+        editor.setTextColor(0xFFFFFFFF);
+        editor.setHintTextColor(0x88FFFFFF);
         editor.setTextSize(16);
-        editor.setPadding(dp(16), dp(8), dp(16), dp(8));
-        editor.setBackgroundColor(0xFFFFFFFF);
+        editor.setGravity(Gravity.CENTER);
+        editor.setPadding(dp(12), dp(10), dp(12), dp(10));
+        editor.setBackground(rounded(0x22FFFFFF, dp(10)));
+        LinearLayout.LayoutParams editorParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(62)
+        );
+        editorParams.topMargin = dp(14);
+        panel.addView(editor, editorParams);
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("\ud560\uc77c \uc218\uc815")
-                .setView(editor)
-                .setNegativeButton("\ucde8\uc18c", null)
-                .setPositiveButton("\uc800\uc7a5", (d, which) -> {
-                    TodoStore.setText(this, item.id, editor.getText().toString());
-                    refreshTodos();
-                })
-                .create();
-        dialog.setOnShowListener(d -> {
-            if (dialog.getWindow() != null) {
-                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFFFFFFFF));
+        LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(48)
+        );
+        actionsParams.topMargin = dp(10);
+        panel.addView(actions, actionsParams);
+
+        TextView cancel = text("\ucde8\uc18c", 15, 0xAAFFFFFF, false);
+        cancel.setGravity(Gravity.CENTER);
+        cancel.setOnClickListener(v -> dialog.dismiss());
+        actions.addView(cancel, new LinearLayout.LayoutParams(dp(70), dp(44)));
+
+        TextView save = text("\uc800\uc7a5", 15, 0xF2FFFFFF, true);
+        save.setGravity(Gravity.CENTER);
+        save.setOnClickListener(v -> {
+            TodoStore.setText(this, item.id, editor.getText().toString());
+            dialog.dismiss();
+            refreshTodos();
+        });
+        actions.addView(save, new LinearLayout.LayoutParams(dp(70), dp(44)));
+
+        editor.setOnEditorActionListener((view, actionId, event) -> {
+            boolean enterPressed = event != null
+                    && event.getAction() == KeyEvent.ACTION_DOWN
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER;
+            if (actionId == EditorInfo.IME_ACTION_DONE || enterPressed) {
+                TodoStore.setText(this, item.id, editor.getText().toString());
+                dialog.dismiss();
+                refreshTodos();
+                return true;
             }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFF111111);
-            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(0xFF555555);
+            return false;
+        });
+
+        dialog.setContentView(panel);
+        dialog.setOnShowListener(d -> {
             editor.requestFocus();
             if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0x00000000));
+                dialog.getWindow().setDimAmount(0.42f);
                 dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+                dialog.getWindow().setLayout(
+                        Math.round(getResources().getDisplayMetrics().widthPixels * 0.84f),
+                        WindowManager.LayoutParams.WRAP_CONTENT
+                );
             }
         });
         dialog.show();
@@ -857,6 +907,13 @@ public class LockActivity extends Activity {
     private int overlayColor() {
         int alpha = Math.round(AppSettings.overlayOpacity(this) * 255f / 100f);
         return (alpha << 24);
+    }
+
+    private GradientDrawable rounded(int color, int radius) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(radius);
+        return drawable;
     }
 
     private void animateIn(View view, long delay) {
