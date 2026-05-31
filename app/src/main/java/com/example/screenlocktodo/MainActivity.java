@@ -205,7 +205,7 @@ public class MainActivity extends Activity {
         card.addView(divider());
 
         CheckBox curtainBothDirections = new CheckBox(this);
-        curtainBothDirections.setText("\uc88c\uc6b0 \ubc00\uae30 \ud5c8\uc6a9");
+        curtainBothDirections.setText("\uc591\ubc29\ud5a5 \ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c");
         curtainBothDirections.setTextSize(15);
         curtainBothDirections.setTextColor(COLOR_INK);
         curtainBothDirections.setPadding(0, dp(10), 0, dp(2));
