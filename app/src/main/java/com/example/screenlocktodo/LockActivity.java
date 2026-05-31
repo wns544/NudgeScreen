@@ -622,10 +622,17 @@ public class LockActivity extends Activity {
         }
 
         @Override
+        protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+            super.onSizeChanged(width, height, oldWidth, oldHeight);
+            setPivotX(width * 0.5f);
+            setPivotY(height * 0.5f);
+        }
+
+        @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             float centerX = getWidth() * 0.5f;
-            float centerY = getHeight() * 0.55f;
+            float centerY = getHeight() * 0.5f;
             float halfLength = dp(9);
             canvas.drawLine(centerX - halfLength, centerY, centerX + halfLength, centerY, paint);
             canvas.drawLine(centerX, centerY - halfLength, centerX, centerY + halfLength, paint);
