@@ -186,8 +186,8 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
-        TextView title = text("Todo Lock", 34, COLOR_INK, true);
-        title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        TextView title = text("\uc7a0\uae50, \ud560 \uc77c", 34, COLOR_INK, true);
+        title.setTypeface(Typeface.create("serif", Typeface.BOLD));
         titleRow.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
         TextView menu = text("\u2630", 22, COLOR_INK, false);
@@ -224,7 +224,7 @@ public class MainActivity extends Activity {
         LinearLayout enabledCopy = new LinearLayout(this);
         enabledCopy.setOrientation(LinearLayout.VERTICAL);
         TextView enabledTitle = text("\uc7a0\uae08\ud654\uba74 \uc0ac\uc6a9", 16, COLOR_INK, false);
-        TextView enabledSubtitle = text("\ud654\uba74\uc744 \ucf30 \ub54c \ud560 \uc77c \ucee4\ud2bc\uc744 \ub744\uc6c1\ub2c8\ub2e4.", 13, COLOR_MUTED, false);
+        TextView enabledSubtitle = text("\ud654\uba74\uc744 \ucf1c\uba74 \ud560 \uc77c \ucee4\ud2bc\uc774 \ub098\ud0c0\ub0a9\ub2c8\ub2e4.", 13, COLOR_MUTED, false);
         enabledSubtitle.setPadding(0, dp(3), dp(10), 0);
         enabledCopy.addView(enabledTitle);
         enabledCopy.addView(enabledSubtitle);
@@ -368,7 +368,7 @@ public class MainActivity extends Activity {
         title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         drawerPanel.addView(title);
 
-        TextView subtitle = text("Todo Lock", 14, COLOR_MUTED, false);
+        TextView subtitle = text("\uc7a0\uae50, \ud560 \uc77c", 14, COLOR_MUTED, false);
         subtitle.setPadding(0, dp(4), 0, dp(18));
         drawerPanel.addView(subtitle);
 
