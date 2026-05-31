@@ -13,12 +13,13 @@ import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.DragEvent;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -36,6 +37,7 @@ public class LockActivity extends Activity {
     private LinearLayout todoList;
     private LinearLayout inputRow;
     private EditText input;
+    private TextView plusButton;
     private TextView undoButton;
     private TextView menuButton;
     private LinearLayout menuPanel;
@@ -204,11 +206,11 @@ public class LockActivity extends Activity {
         date.setGravity(Gravity.CENTER);
         root.addView(date, fullWidthWrap());
 
-        TextView plus = text("+", 32, 0xBFFFFFFF, false);
-        plus.setGravity(Gravity.CENTER);
-        plus.setPadding(0, dp(24), 0, dp(16));
-        plus.setOnClickListener(v -> toggleInput());
-        root.addView(plus, fullWidthWrap());
+        plusButton = text("+", 32, 0xBFFFFFFF, false);
+        plusButton.setGravity(Gravity.CENTER);
+        plusButton.setPadding(0, dp(24), 0, dp(16));
+        plusButton.setOnClickListener(v -> toggleInput());
+        root.addView(plusButton, fullWidthWrap());
 
         inputRow = new LinearLayout(this);
         inputRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -225,12 +227,19 @@ public class LockActivity extends Activity {
         input.setTextColor(0xFFFFFFFF);
         input.setHintTextColor(0x99FFFFFF);
         input.setTextSize(16);
-        input.setBackgroundColor(0x22FFFFFF);
-        inputRow.addView(input, new LinearLayout.LayoutParams(0, dp(46), 1));
-
-        Button add = ghostButton("\ucd94\uac00", 15);
-        add.setOnClickListener(v -> addTodo());
-        inputRow.addView(add, new LinearLayout.LayoutParams(dp(74), dp(46)));
+        input.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        input.setBackgroundColor(0x00000000);
+        input.setOnEditorActionListener((view, actionId, event) -> {
+            boolean enterPressed = event != null
+                    && event.getAction() == KeyEvent.ACTION_DOWN
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER;
+            if (actionId == EditorInfo.IME_ACTION_DONE || enterPressed) {
+                addTodo();
+                return true;
+            }
+            return false;
+        });
+        inputRow.addView(input, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46)));
 
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
@@ -294,6 +303,10 @@ public class LockActivity extends Activity {
     }
 
     private void addTodo() {
+        if (input.getText().toString().trim().length() == 0) {
+            hideInput();
+            return;
+        }
         TodoStore.add(this, input.getText().toString());
         input.setText("");
         hideInput();
@@ -482,9 +495,18 @@ public class LockActivity extends Activity {
             hideInput();
             return;
         }
+        animatePlusOpen();
         inputRow.animate().cancel();
         inputRow.setVisibility(View.VISIBLE);
-        inputRow.animate().alpha(1f).translationY(0f).setDuration(180).start();
+        inputRow.setScaleX(0.96f);
+        inputRow.setScaleY(0.96f);
+        inputRow.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(190)
+                .start();
         input.requestFocus();
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         if (imm != null) {
@@ -493,11 +515,50 @@ public class LockActivity extends Activity {
     }
 
     private void hideInput() {
+        animatePlusClosed();
         inputRow.animate()
                 .alpha(0f)
                 .translationY(-dp(8))
+                .scaleX(0.96f)
+                .scaleY(0.96f)
                 .setDuration(160)
                 .withEndAction(() -> inputRow.setVisibility(View.GONE))
+                .start();
+    }
+
+    private void animatePlusOpen() {
+        if (plusButton == null) {
+            return;
+        }
+        plusButton.animate().cancel();
+        plusButton.animate()
+                .rotation(45f)
+                .scaleX(1.16f)
+                .scaleY(1.16f)
+                .setDuration(120)
+                .withEndAction(() -> plusButton.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(110)
+                        .start())
+                .start();
+    }
+
+    private void animatePlusClosed() {
+        if (plusButton == null) {
+            return;
+        }
+        plusButton.animate().cancel();
+        plusButton.animate()
+                .rotation(0f)
+                .scaleX(0.9f)
+                .scaleY(0.9f)
+                .setDuration(90)
+                .withEndAction(() -> plusButton.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(110)
+                        .start())
                 .start();
     }
 
@@ -534,16 +595,6 @@ public class LockActivity extends Activity {
             view.setTypeface(view.getTypeface(), Typeface.BOLD);
         }
         return view;
-    }
-
-    private Button ghostButton(String label, int sp) {
-        Button button = new Button(this);
-        button.setAllCaps(false);
-        button.setText(label);
-        button.setTextSize(sp);
-        button.setTextColor(0xCCFFFFFF);
-        button.setBackgroundColor(0x22FFFFFF);
-        return button;
     }
 
     private LinearLayout.LayoutParams fullWidthWrap() {
