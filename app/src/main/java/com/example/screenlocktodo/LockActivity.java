@@ -616,6 +616,7 @@ public class LockActivity extends Activity {
                         boolean bothDirections = AppSettings.curtainUnlockBothDirections(LockActivity.this);
                         float resistedDx = (!bothDirections && dx < 0) ? dx * 0.18f : dx * 0.92f;
                         setTranslationX(resistedDx);
+                        updateCurtainOpacity(resistedDx, bothDirections || dx > 0);
                         return true;
                     }
                     break;
@@ -641,6 +642,7 @@ public class LockActivity extends Activity {
                 float targetX = dx < 0 ? -getWidth() : getWidth();
                 animate()
                         .translationX(targetX)
+                        .alpha(0f)
                         .setDuration(240)
                         .withEndAction(() -> closeLockTask())
                         .start();
@@ -652,6 +654,13 @@ public class LockActivity extends Activity {
                     .alpha(1f)
                     .setDuration(170)
                     .start();
+        }
+
+        private void updateCurtainOpacity(float dx, boolean allowedDirection) {
+            float threshold = Math.max(dp(150), getWidth() * 0.32f);
+            float progress = Math.min(1f, Math.abs(dx) / threshold);
+            float fadeStrength = allowedDirection ? 0.82f : 0.24f;
+            setAlpha(Math.max(0.18f, 1f - progress * fadeStrength));
         }
 
         private boolean isInside(View child, MotionEvent event) {
