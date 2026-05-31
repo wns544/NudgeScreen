@@ -273,7 +273,7 @@ public class LockActivity extends Activity {
         plusButton.setOnClickListener(v -> toggleInput());
         root.addView(plusButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(72)
+                dp(48)
         ));
 
         inputBlock = new LinearLayout(this);
@@ -316,12 +316,12 @@ public class LockActivity extends Activity {
 
         inputDivider = text("\u2013", 16, 0x66FFFFFF, false);
         inputDivider.setGravity(Gravity.CENTER);
-        inputBlock.addView(inputDivider, fullWidthWrap());
+        inputBlock.addView(inputDivider, compactDividerParams());
 
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
         todoList.setGravity(Gravity.CENTER_HORIZONTAL);
-        todoList.setPadding(0, dp(8), 0, dp(18));
+        todoList.setPadding(0, 0, 0, dp(18));
         todoList.setLayoutTransition(new android.animation.LayoutTransition());
         root.addView(todoList, narrowParams());
 
@@ -455,7 +455,7 @@ public class LockActivity extends Activity {
             if (!todosLocked) {
                 divider.setOnTouchListener(new DividerTouchListener(i));
             }
-            todoList.addView(divider, fullWidthWrap());
+            todoList.addView(divider, compactDividerParams());
             if (animateRows) {
                 animateIn(divider, i * 35 + 20);
             }
@@ -467,10 +467,10 @@ public class LockActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER);
-        row.setPadding(0, dp(5), 0, dp(5));
+        row.setPadding(0, 0, 0, 0);
         row.setTag(item.id);
 
-        row.addView(text("", 1, 0x00FFFFFF, false), new LinearLayout.LayoutParams(dp(58), dp(44)));
+        row.addView(text("", 1, 0x00FFFFFF, false), new LinearLayout.LayoutParams(dp(58), dp(38)));
 
         TextView label = text(item.text, 16, item.done ? 0x99FFFFFF : 0xFFFFFFFF, false);
         label.setGravity(Gravity.CENTER);
@@ -478,7 +478,7 @@ public class LockActivity extends Activity {
 
         TextView hint = text(item.done ? "\u2713" : "", 14, item.done ? 0x99FFFFFF : 0x00FFFFFF, false);
         hint.setGravity(Gravity.CENTER);
-        row.addView(hint, new LinearLayout.LayoutParams(dp(58), dp(44)));
+        row.addView(hint, new LinearLayout.LayoutParams(dp(58), dp(38)));
 
         if (todosLocked) {
             return row;
@@ -1104,6 +1104,13 @@ public class LockActivity extends Activity {
         return new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+    }
+
+    private LinearLayout.LayoutParams compactDividerParams() {
+        return new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(14)
         );
     }
 
