@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -529,8 +530,10 @@ public class LockActivity extends Activity {
         editor.setText(item.text);
         editor.setSelectAllOnFocus(false);
         editor.setTextColor(0xFF111111);
+        editor.setHintTextColor(0xFF777777);
         editor.setTextSize(16);
         editor.setPadding(dp(16), dp(8), dp(16), dp(8));
+        editor.setBackgroundColor(0xFFFFFFFF);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("\ud560\uc77c \uc218\uc815")
@@ -542,6 +545,11 @@ public class LockActivity extends Activity {
                 })
                 .create();
         dialog.setOnShowListener(d -> {
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0xFFFFFFFF));
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(0xFF111111);
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(0xFF555555);
             editor.requestFocus();
             if (dialog.getWindow() != null) {
                 dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
