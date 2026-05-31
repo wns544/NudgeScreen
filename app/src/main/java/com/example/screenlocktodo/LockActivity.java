@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -51,7 +52,7 @@ public class LockActivity extends Activity {
     private TextView timeText;
     private TextView meridiemText;
     private TextView dateText;
-    private TextView undoButton;
+    private UndoButtonView undoButton;
     private TextView menuButton;
     private LinearLayout menuPanel;
     private LockToggleView lockButton;
@@ -223,8 +224,7 @@ public class LockActivity extends Activity {
         lockButton.setOnClickListener(v -> toggleTodoLock());
         menuPanel.addView(lockButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
-        undoButton = text("\u21b6", 22, 0xDFFFFFFF, false);
-        undoButton.setGravity(Gravity.CENTER);
+        undoButton = new UndoButtonView(this);
         undoButton.setOnClickListener(v -> undoDelete());
         menuPanel.addView(undoButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
@@ -419,8 +419,7 @@ public class LockActivity extends Activity {
         }
         if (undoButton != null) {
             boolean canUndo = lastDeletedItem != null;
-            undoButton.setEnabled(canUndo);
-            undoButton.setTextColor(canUndo ? 0xDFFFFFFF : 0x55FFFFFF);
+            undoButton.setActive(canUndo);
         }
     }
 
@@ -1108,6 +1107,7 @@ public class LockActivity extends Activity {
 
     private final class LockToggleView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF rect = new RectF();
         private boolean locked;
 
         LockToggleView(Context context) {
@@ -1118,7 +1118,7 @@ public class LockActivity extends Activity {
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setStrokeWidth(dp(1));
+            paint.setStrokeWidth(dp(1.7f));
         }
 
         void setLocked(boolean locked) {
@@ -1131,33 +1131,75 @@ public class LockActivity extends Activity {
             super.onDraw(canvas);
             float cx = getWidth() * 0.5f;
             float cy = getHeight() * 0.5f;
-            float bodyWidth = dp(12);
-            float bodyHeight = dp(14);
+            float bodyWidth = dp(14);
+            float bodyHeight = dp(13);
             float left = cx - bodyWidth * 0.5f;
-            float top = cy - dp(1);
+            float top = cy + dp(2);
             float right = cx + bodyWidth * 0.5f;
             float bottom = top + bodyHeight;
-            canvas.drawRoundRect(left, top, right, bottom, dp(2), dp(2), paint);
+            rect.set(left, top, right, bottom);
+            canvas.drawRoundRect(rect, dp(3), dp(3), paint);
 
-            float shackleTop = top - dp(11);
-            float shackleBottom = top - dp(1);
-            float shackleLeft = cx - dp(5);
-            float shackleRight = cx + dp(5);
+            float shackleTop = top - dp(14);
+            float shackleBottom = top + dp(1);
+            float shackleLeft = cx - dp(6);
+            float shackleRight = cx + dp(6);
             if (locked) {
-                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(7), 205, 130, false, paint);
-                canvas.drawLine(shackleLeft + dp(1), top - dp(3), shackleLeft + dp(1), top - dp(1), paint);
-                canvas.drawLine(shackleRight - dp(1), top - dp(3), shackleRight - dp(1), top - dp(1), paint);
+                rect.set(shackleLeft, shackleTop, shackleRight, shackleBottom);
+                canvas.drawArc(rect, 205, 130, false, paint);
+                canvas.drawLine(shackleLeft + dp(1), top - dp(5), shackleLeft + dp(1), top - dp(1), paint);
+                canvas.drawLine(shackleRight - dp(1), top - dp(5), shackleRight - dp(1), top - dp(1), paint);
             } else {
                 canvas.save();
-                canvas.rotate(-28f, cx + dp(4), top - dp(7));
+                canvas.rotate(-24f, cx + dp(4), top - dp(8));
                 float openLeft = cx - dp(1);
-                float openRight = cx + dp(9);
-                float openTop = top - dp(13);
-                float openBottom = top - dp(2);
-                canvas.drawArc(openLeft, openTop, openRight, openBottom + dp(7), 205, 125, false, paint);
-                canvas.drawLine(openLeft + dp(1), top - dp(5), openLeft + dp(1), top - dp(2), paint);
+                float openRight = cx + dp(11);
+                float openTop = top - dp(15);
+                float openBottom = top;
+                rect.set(openLeft, openTop, openRight, openBottom);
+                canvas.drawArc(rect, 206, 126, false, paint);
+                canvas.drawLine(openLeft + dp(1), top - dp(6), openLeft + dp(1), top - dp(1), paint);
                 canvas.restore();
             }
+        }
+    }
+
+    private final class UndoButtonView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF arcBounds = new RectF();
+        private boolean active;
+
+        UndoButtonView(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setStrokeWidth(dp(1.8f));
+        }
+
+        void setActive(boolean active) {
+            this.active = active;
+            setEnabled(active);
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            paint.setColor(active ? 0xDFFFFFFF : 0x55FFFFFF);
+
+            float cx = getWidth() * 0.5f;
+            float cy = getHeight() * 0.5f + dp(1);
+            float radius = dp(8.5f);
+            arcBounds.set(cx - radius, cy - radius, cx + radius, cy + radius);
+            canvas.drawArc(arcBounds, 205, 250, false, paint);
+
+            float arrowX = cx - dp(8);
+            float arrowY = cy - dp(6);
+            canvas.drawLine(arrowX, arrowY, arrowX - dp(5), arrowY, paint);
+            canvas.drawLine(arrowX, arrowY, arrowX, arrowY - dp(5), paint);
         }
     }
 
@@ -1222,6 +1264,10 @@ public class LockActivity extends Activity {
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private float dp(float value) {
+        return value * getResources().getDisplayMetrics().density;
     }
 
     private int overlayColor() {
