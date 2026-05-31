@@ -37,9 +37,9 @@ public class MainActivity extends Activity {
     private static final int COLOR_MUTED = 0xFF6E6E73;
     private static final int COLOR_PANEL = 0xFFFFFFFF;
     private static final int COLOR_LINE = 0xFFE5E5EA;
-    private static final int COLOR_ACCENT = 0xFF007AFF;
-    private static final int COLOR_GREEN = 0xFF34C759;
-    private static final int COLOR_DANGER = 0xFFFF3B30;
+    private static final int COLOR_ACCENT = 0xFF6E8FBF;
+    private static final int COLOR_GREEN = 0xFF7FA88A;
+    private static final int COLOR_DANGER = 0xFFD9796F;
     private static final int COLOR_FIELD = 0xFFF2F2F7;
 
     private LinearLayout todoList;
@@ -150,8 +150,8 @@ public class MainActivity extends Activity {
         chips.setOrientation(LinearLayout.HORIZONTAL);
         chips.setGravity(Gravity.LEFT);
         chips.setPadding(0, dp(12), 0, 0);
-        chips.addView(chip("\uc2e4\ud589 \uc911", 0x1F34C759, COLOR_GREEN));
-        TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? "\uc88c\uc6b0 \ucee4\ud2bc" : "\uc624\ub978\ucabd \ucee4\ud2bc", 0x1F007AFF, COLOR_ACCENT);
+        chips.addView(chip("\uc2e4\ud589 \uc911", 0x267FA88A, COLOR_GREEN));
+        TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? "\uc88c\uc6b0 \ucee4\ud2bc" : "\uc624\ub978\ucabd \ucee4\ud2bc", 0x266E8FBF, COLOR_ACCENT);
         LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dp(34)
