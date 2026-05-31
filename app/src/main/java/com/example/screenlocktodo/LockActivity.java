@@ -67,6 +67,7 @@ public class LockActivity extends Activity {
     private View draggingTodoRow;
     private float draggingTodoStartCenterY;
     private float draggingTouchToCenterOffset;
+    private int draggingTodoMoveOffset;
     private View draggingPreviousDivider;
     private View draggingNextDivider;
     private boolean firstTodoRender = true;
@@ -502,6 +503,7 @@ public class LockActivity extends Activity {
         row.getLocationOnScreen(location);
         draggingTodoStartCenterY = location[1] + row.getHeight() * 0.5f;
         draggingTouchToCenterOffset = draggingTodoStartCenterY - rawY;
+        draggingTodoMoveOffset = todoMoveOffsetForIndex(draggingTodoIndex);
         hideDraggedTodoDividers(row);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             row.setElevation(dp(6));
@@ -530,7 +532,7 @@ public class LockActivity extends Activity {
         View row = draggingTodoRow;
         row.animate().cancel();
         int dropDuration = targetIndex == draggingTodoIndex ? 180 : 150;
-        float targetTranslation = (targetIndex - draggingTodoIndex) * todoMoveOffset();
+        float targetTranslation = dragTranslationToIndex(targetIndex);
         if (targetIndex == draggingTodoIndex) {
             animateReorderPreviewToZero(dropDuration);
         }
@@ -588,6 +590,7 @@ public class LockActivity extends Activity {
         draggingTodoRow = null;
         draggingTodoStartCenterY = 0f;
         draggingTouchToCenterOffset = 0f;
+        draggingTodoMoveOffset = 0;
         draggingPreviousDivider = null;
         draggingNextDivider = null;
     }
@@ -644,7 +647,7 @@ public class LockActivity extends Activity {
             return;
         }
         dragPreviewIndex = targetIndex;
-        int offset = todoMoveOffset();
+        int offset = draggingTodoMoveOffset > 0 ? draggingTodoMoveOffset : todoMoveOffsetForIndex(draggingTodoIndex);
         for (int i = 0; i < todoList.getChildCount(); i += 2) {
             View row = todoList.getChildAt(i);
             Object tag = row.getTag();
@@ -663,6 +666,22 @@ public class LockActivity extends Activity {
                 todoList.getChildAt(i + 1).animate().translationY(translation).setDuration(150).start();
             }
         }
+    }
+
+    private float dragTranslationToIndex(int targetIndex) {
+        if (targetIndex == draggingTodoIndex) {
+            return 0f;
+        }
+        int from = Math.min(draggingTodoIndex, targetIndex);
+        int to = Math.max(draggingTodoIndex, targetIndex);
+        int distance = 0;
+        for (int index = from; index <= to; index++) {
+            if (index == draggingTodoIndex) {
+                continue;
+            }
+            distance += todoMoveOffsetForIndex(index);
+        }
+        return targetIndex > draggingTodoIndex ? distance : -distance;
     }
 
     private void clearReorderPreview() {
@@ -707,14 +726,22 @@ public class LockActivity extends Activity {
         todoList.setLayoutTransition(transition);
     }
 
-    private int todoMoveOffset() {
+    private int todoMoveOffsetForIndex(int index) {
         int rowHeight = dp(54);
         int dividerHeight = dp(24);
-        if (todoList.getChildCount() > 0 && todoList.getChildAt(0).getHeight() > 0) {
-            rowHeight = todoList.getChildAt(0).getHeight();
+        int rowChildIndex = index * 2;
+        if (rowChildIndex >= 0 && rowChildIndex < todoList.getChildCount()) {
+            View row = todoList.getChildAt(rowChildIndex);
+            if (row.getHeight() > 0) {
+                rowHeight = row.getHeight();
+            }
         }
-        if (todoList.getChildCount() > 1 && todoList.getChildAt(1).getHeight() > 0) {
-            dividerHeight = todoList.getChildAt(1).getHeight();
+        int dividerChildIndex = rowChildIndex + 1;
+        if (dividerChildIndex >= 0 && dividerChildIndex < todoList.getChildCount()) {
+            View divider = todoList.getChildAt(dividerChildIndex);
+            if (divider.getHeight() > 0) {
+                dividerHeight = divider.getHeight();
+            }
         }
         return rowHeight + dividerHeight;
     }
