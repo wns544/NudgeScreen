@@ -17,8 +17,7 @@ public class BootReceiver extends BroadcastReceiver {
                 || LockMonitorService.ACTION_RESTART_MONITOR.equals(action)) {
             if (AppSettings.lockScreenEnabled(context)) {
                 LockMonitorService.start(context);
-                LockMonitorService.scheduleRestart(context, 5000);
-                LockMonitorService.scheduleRestart(context, 30000);
+                LockMonitorService.scheduleRestart(context, LockMonitorService.KEEP_ALIVE_DELAY_MS);
             } else {
                 LockMonitorService.stop(context);
             }

@@ -22,7 +22,8 @@ public class LockMonitorService extends Service {
     private static final String LOCK_CHANNEL_ID = "todo_lock_fullscreen_v1";
     private static final int SERVICE_NOTIFICATION_ID = 1001;
     private static final int LOCK_NOTIFICATION_ID = 1002;
-    private static final long KEEP_ALIVE_DELAY_MS = 30000L;
+    static final long QUICK_RESTART_DELAY_MS = 5000L;
+    static final long KEEP_ALIVE_DELAY_MS = 5 * 60 * 1000L;
     private static final long LOCK_NOTIFICATION_COOLDOWN_MS = 15000L;
     private long lastLockNotificationAt;
 
@@ -59,7 +60,7 @@ public class LockMonitorService extends Service {
                 context.startService(intent);
             }
         } catch (RuntimeException ignored) {
-            scheduleRestart(context, 5000);
+            scheduleRestart(context, QUICK_RESTART_DELAY_MS);
         }
     }
 
@@ -89,11 +90,20 @@ public class LockMonitorService extends Service {
                 restartIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
-        alarmManager.set(
-                AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime() + delayMillis,
-                restartPendingIntent
-        );
+        long triggerAt = SystemClock.elapsedRealtime() + delayMillis;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerAt,
+                    restartPendingIntent
+            );
+        } else {
+            alarmManager.set(
+                    AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                    triggerAt,
+                    restartPendingIntent
+            );
+        }
     }
 
     @Override
@@ -134,6 +144,7 @@ public class LockMonitorService extends Service {
         }
         if (AppSettings.lockScreenEnabled(this)) {
             scheduleRestart(1200);
+            scheduleKeepAlive();
         }
         super.onDestroy();
     }
@@ -142,7 +153,8 @@ public class LockMonitorService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         if (AppSettings.lockScreenEnabled(this)) {
             scheduleRestart(700);
-            scheduleRestart(5000);
+            scheduleRestart(QUICK_RESTART_DELAY_MS);
+            scheduleKeepAlive();
         }
         super.onTaskRemoved(rootIntent);
     }
@@ -202,8 +214,9 @@ public class LockMonitorService extends Service {
 
         cancelScheduledRestart(context, alarmManager, 700);
         cancelScheduledRestart(context, alarmManager, 1200);
-        cancelScheduledRestart(context, alarmManager, 5000);
+        cancelScheduledRestart(context, alarmManager, QUICK_RESTART_DELAY_MS);
         cancelScheduledRestart(context, alarmManager, 30000);
+        cancelScheduledRestart(context, alarmManager, KEEP_ALIVE_DELAY_MS);
     }
 
     private static void cancelScheduledRestart(Context context, AlarmManager alarmManager, long delayMillis) {
