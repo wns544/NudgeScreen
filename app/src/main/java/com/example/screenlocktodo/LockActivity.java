@@ -58,6 +58,7 @@ public class LockActivity extends Activity {
     private LinearLayout menuPanel;
     private TextView lockButton;
     private View curtainBackground;
+    private FrameLayout curtainContent;
     private TodoItem lastDeletedItem;
     private int lastDeletedIndex = -1;
     private boolean todosLocked;
@@ -185,6 +186,12 @@ public class LockActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
 
+        curtainContent = new FrameLayout(this);
+        shell.addView(curtainContent, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
         menuButton = text("\u22ee", 28, 0xDFFFFFFF, false);
         menuButton.setGravity(Gravity.CENTER);
         menuButton.setOnClickListener(v -> toggleMenu());
@@ -228,7 +235,7 @@ public class LockActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(0x00000000);
-        shell.addView(scroll, new FrameLayout.LayoutParams(
+        curtainContent.addView(scroll, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -320,8 +327,8 @@ public class LockActivity extends Activity {
         curtainHint.setGravity(Gravity.CENTER);
         curtainHint.setPadding(0, dp(10), 0, dp(8));
         root.addView(curtainHint, fullWidthWrap());
-        shell.addView(menuButton, menuParams);
-        shell.addView(menuPanel, panelParams);
+        curtainContent.addView(menuButton, menuParams);
+        curtainContent.addView(menuPanel, panelParams);
         return shell;
     }
 
@@ -969,8 +976,11 @@ public class LockActivity extends Activity {
                     if (curtainBackground != null) {
                         curtainBackground.animate().cancel();
                     }
+                    if (curtainContent != null) {
+                        curtainContent.animate().cancel();
+                    }
                     if (!curtainBlocked) {
-                        setTranslationX(0f);
+                        setCurtainContentTranslationX(0f);
                         setAlpha(1f);
                         setCurtainBackgroundAlpha(1f);
                     }
@@ -987,7 +997,7 @@ public class LockActivity extends Activity {
                     if (curtainSwiping) {
                         boolean bothDirections = AppSettings.curtainUnlockBothDirections(LockActivity.this);
                         float resistedDx = (!bothDirections && dx < 0) ? dx * 0.18f : dx * 0.92f;
-                        setTranslationX(resistedDx);
+                        setCurtainContentTranslationX(resistedDx);
                         updateCurtainOpacity(resistedDx, bothDirections || dx > 0);
                         return true;
                     }
@@ -1012,11 +1022,15 @@ public class LockActivity extends Activity {
             float threshold = Math.max(dp(150), getWidth() * 0.32f);
             if (allowedDirection && Math.abs(dx) >= threshold) {
                 float targetX = dx < 0 ? -getWidth() : getWidth();
-                animate()
-                        .translationX(targetX)
-                        .setDuration(240)
-                        .withEndAction(() -> closeLockTask())
-                        .start();
+                if (curtainContent != null) {
+                    curtainContent.animate()
+                            .translationX(targetX)
+                            .setDuration(240)
+                            .withEndAction(() -> closeLockTask())
+                            .start();
+                } else {
+                    closeLockTask();
+                }
                 if (curtainBackground != null) {
                     curtainBackground.animate()
                             .alpha(0f)
@@ -1026,10 +1040,12 @@ public class LockActivity extends Activity {
                 return;
             }
 
-            animate()
-                    .translationX(0f)
-                    .setDuration(170)
-                    .start();
+            if (curtainContent != null) {
+                curtainContent.animate()
+                        .translationX(0f)
+                        .setDuration(170)
+                        .start();
+            }
             if (curtainBackground != null) {
                 curtainBackground.animate()
                         .alpha(1f)
@@ -1048,6 +1064,12 @@ public class LockActivity extends Activity {
         private void setCurtainBackgroundAlpha(float alpha) {
             if (curtainBackground != null) {
                 curtainBackground.setAlpha(alpha);
+            }
+        }
+
+        private void setCurtainContentTranslationX(float translationX) {
+            if (curtainContent != null) {
+                curtainContent.setTranslationX(translationX);
             }
         }
 
