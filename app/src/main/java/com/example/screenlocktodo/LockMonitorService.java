@@ -32,7 +32,6 @@ public class LockMonitorService extends Service {
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                 cancelLockNotification(context);
-                showLockScreen(context, false, true, false);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
                 showLockScreen(context, true, true, true);
             }
