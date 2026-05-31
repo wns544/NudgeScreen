@@ -186,7 +186,7 @@ public class LockMonitorService extends Service {
                         | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
 
         PowerManager powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
-        if (wakeDisplay && powerManager != null) {
+        if (wakeDisplay && powerManager != null && !powerManager.isInteractive()) {
             PowerManager.WakeLock wakeLock = powerManager.newWakeLock(
                     PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
                     "ScreenLockTodo:showLock"

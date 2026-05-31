@@ -57,6 +57,15 @@ public class LockActivity extends Activity {
     }
 
     @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        configureLockWindow();
+        LockMonitorService.cancelLockNotification(this);
+        refreshTodos();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         LockMonitorService.cancelLockNotification(this);
