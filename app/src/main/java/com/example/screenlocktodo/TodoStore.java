@@ -4,28 +4,40 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 
+import java.util.ArrayList;
 import java.util.List;
 
 final class TodoStore {
     private static final String PREFS = "todo_lock_store";
     private static final String KEY_ITEMS = "items";
     private static final String KEY_MIGRATED = "migrated_to_device_protected";
+    private static List<TodoItem> cachedItems;
 
     private TodoStore() {
     }
 
-    static List<TodoItem> load(Context context) {
+    static synchronized List<TodoItem> load(Context context) {
+        if (cachedItems != null) {
+            return new ArrayList<>(cachedItems);
+        }
+
         Context storeContext = storageContext(context);
         migrateIfNeeded(context, storeContext);
         SharedPreferences prefs = storeContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String raw = prefs.getString(KEY_ITEMS, "[]");
 
         try {
-            return TodoCodec.decode(raw);
+            cachedItems = TodoCodec.decode(raw);
+            return new ArrayList<>(cachedItems);
         } catch (IllegalArgumentException ignored) {
             prefs.edit().putString(KEY_ITEMS, "[]").apply();
-            return TodoCodec.decode("[]");
+            cachedItems = TodoCodec.decode("[]");
+            return new ArrayList<>(cachedItems);
         }
+    }
+
+    static void warm(Context context) {
+        load(context);
     }
 
     static void add(Context context, String text) {
@@ -107,13 +119,14 @@ final class TodoStore {
         save(context, items);
     }
 
-    private static void save(Context context, List<TodoItem> items) {
+    private static synchronized void save(Context context, List<TodoItem> items) {
         Context storeContext = storageContext(context);
         migrateIfNeeded(context, storeContext);
         storeContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY_ITEMS, TodoCodec.encode(items))
                 .apply();
+        cachedItems = new ArrayList<>(items);
     }
 
     private static Context storageContext(Context context) {

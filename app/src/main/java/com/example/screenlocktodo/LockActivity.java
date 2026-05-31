@@ -44,6 +44,7 @@ public class LockActivity extends Activity {
     private int lastDeletedIndex = -1;
     private boolean todosLocked;
     private long pendingTapItemId = -1L;
+    private boolean firstTodoRender = true;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -299,19 +300,28 @@ public class LockActivity extends Activity {
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(28), 0, dp(24));
             todoList.addView(empty);
-            animateIn(empty, 0);
+            if (!firstTodoRender) {
+                animateIn(empty, 0);
+            }
+            firstTodoRender = false;
             return;
         }
 
+        boolean animateRows = !firstTodoRender;
         for (int i = 0; i < items.size(); i++) {
             View row = todoRow(items.get(i), i);
             todoList.addView(row);
-            animateIn(row, i * 35);
+            if (animateRows) {
+                animateIn(row, i * 35);
+            }
             TextView divider = text("\u2013", 16, 0x66FFFFFF, false);
             divider.setGravity(Gravity.CENTER);
             todoList.addView(divider, fullWidthWrap());
-            animateIn(divider, i * 35 + 20);
+            if (animateRows) {
+                animateIn(divider, i * 35 + 20);
+            }
         }
+        firstTodoRender = false;
     }
 
     private View todoRow(TodoItem item, int index) {

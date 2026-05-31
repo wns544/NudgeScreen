@@ -32,6 +32,7 @@ public class LockMonitorService extends Service {
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                 cancelLockNotification(context);
+                TodoStore.warm(context);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
                 showLockScreen(context, true, true, true);
             }
@@ -81,6 +82,7 @@ public class LockMonitorService extends Service {
         createNotificationChannels();
         registerScreenReceiver();
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
+        TodoStore.warm(this);
         scheduleKeepAlive();
     }
 
@@ -89,6 +91,7 @@ public class LockMonitorService extends Service {
         createNotificationChannels();
         registerScreenReceiver();
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
+        TodoStore.warm(this);
         scheduleKeepAlive();
         return START_STICKY;
     }
