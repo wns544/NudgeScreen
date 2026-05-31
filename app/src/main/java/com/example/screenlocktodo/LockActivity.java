@@ -56,7 +56,7 @@ public class LockActivity extends Activity {
     private TextView undoButton;
     private TextView menuButton;
     private LinearLayout menuPanel;
-    private TextView lockButton;
+    private LockToggleView lockButton;
     private View curtainBackground;
     private FrameLayout curtainContent;
     private TodoItem lastDeletedItem;
@@ -212,8 +212,7 @@ public class LockActivity extends Activity {
         menuPanel.setPadding(0, 0, 0, 0);
         menuPanel.setBackgroundColor(0x00000000);
 
-        lockButton = text("\u26bf", 20, 0xDFFFFFFF, false);
-        lockButton.setGravity(Gravity.CENTER);
+        lockButton = new LockToggleView(this);
         lockButton.setOnClickListener(v -> toggleTodoLock());
         menuPanel.addView(lockButton, new LinearLayout.LayoutParams(dp(44), dp(44)));
 
@@ -398,8 +397,7 @@ public class LockActivity extends Activity {
 
     private void updateMenuButtons() {
         if (lockButton != null) {
-            lockButton.setText(todosLocked ? "\ud83d\udd12" : "\ud83d\udd13");
-            lockButton.setTextColor(todosLocked ? 0xFFFFE4A8 : 0xDFFFFFFF);
+            lockButton.setLocked(todosLocked);
         }
         if (undoButton != null) {
             boolean canUndo = lastDeletedItem != null;
@@ -468,12 +466,11 @@ public class LockActivity extends Activity {
 
         row.addView(text("", 1, 0x00FFFFFF, false), new LinearLayout.LayoutParams(dp(58), dp(44)));
 
-        TextView label = text(item.text, 16, todosLocked ? 0xCCFFFFFF : (item.done ? 0x99FFFFFF : 0xFFFFFFFF), false);
+        TextView label = text(item.text, 16, item.done ? 0x99FFFFFF : 0xFFFFFFFF, false);
         label.setGravity(Gravity.CENTER);
         row.addView(label, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
-        TextView hint = text(todosLocked ? "\ud83d\udd12" : (item.done ? "\u2713" : ""), 14,
-                todosLocked ? 0xAAFFFFFF : (item.done ? 0x99FFFFFF : 0x00FFFFFF), false);
+        TextView hint = text(item.done ? "\u2713" : "", 14, item.done ? 0x99FFFFFF : 0x00FFFFFF, false);
         hint.setGravity(Gravity.CENTER);
         row.addView(hint, new LinearLayout.LayoutParams(dp(58), dp(44)));
 
@@ -482,16 +479,10 @@ public class LockActivity extends Activity {
         }
 
         SwipeActionListener swipeActionListener = new SwipeActionListener(item, index, row, hint);
-        row.setOnTouchListener(swipeActionListener);
         label.setOnTouchListener(swipeActionListener);
-        hint.setOnTouchListener(swipeActionListener);
         View.OnClickListener clickListener = v -> handleTodoTap(item);
-        row.setOnClickListener(clickListener);
         label.setOnClickListener(clickListener);
-        hint.setOnClickListener(clickListener);
-        row.setOnLongClickListener(v -> startTodoDrag(row, item));
         label.setOnLongClickListener(v -> startTodoDrag(row, item));
-        hint.setOnLongClickListener(v -> startTodoDrag(row, item));
         row.setOnDragListener((view, event) -> handleTodoDropTarget(row, index, event));
         return row;
     }
@@ -869,6 +860,54 @@ public class LockActivity extends Activity {
                 }
             });
             iconAnimator.start();
+        }
+    }
+
+    private final class LockToggleView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private boolean locked;
+
+        LockToggleView(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+            paint.setColor(0xCCFFFFFF);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setStrokeWidth(dp(1));
+        }
+
+        void setLocked(boolean locked) {
+            this.locked = locked;
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float cx = getWidth() * 0.5f;
+            float cy = getHeight() * 0.52f;
+            float bodyWidth = dp(14);
+            float bodyHeight = dp(10);
+            float left = cx - bodyWidth * 0.5f;
+            float top = cy - bodyHeight * 0.1f;
+            float right = cx + bodyWidth * 0.5f;
+            float bottom = top + bodyHeight;
+            canvas.drawRoundRect(left, top, right, bottom, dp(2), dp(2), paint);
+
+            float shackleTop = top - dp(8);
+            float shackleBottom = top + dp(1);
+            float shackleLeft = cx - dp(5);
+            float shackleRight = cx + dp(5);
+            if (locked) {
+                canvas.drawArc(shackleLeft, shackleTop, shackleRight, shackleBottom + dp(5),
+                        200, 140, false, paint);
+            } else {
+                canvas.drawArc(shackleLeft - dp(4), shackleTop, shackleRight - dp(4), shackleBottom + dp(5),
+                        195, 118, false, paint);
+                canvas.drawLine(shackleRight - dp(4), top - dp(2), shackleRight + dp(1), top - dp(5), paint);
+            }
         }
     }
 
