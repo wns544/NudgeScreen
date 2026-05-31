@@ -281,8 +281,8 @@ public class LockActivity extends Activity {
         plusButton = new PlusButtonView(this);
         plusButton.setOnClickListener(v -> toggleInput());
         FrameLayout.LayoutParams plusButtonParams = new FrameLayout.LayoutParams(
-                dp(52),
-                dp(52),
+                dp(44),
+                dp(44),
                 Gravity.CENTER
         );
         plusTouchRow.addView(plusButton, plusButtonParams);
@@ -1064,10 +1064,6 @@ public class LockActivity extends Activity {
             float halfLength = dp(9) * (1f + 0.4142f * openProgress);
 
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(1));
-            paint.setColor(0x33FFFFFF);
-            canvas.drawCircle(centerX, centerY, dp(22), paint);
-
             paint.setStrokeWidth(dp(2));
             paint.setColor(0xBFFFFFFF);
             canvas.save();
