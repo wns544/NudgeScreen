@@ -523,13 +523,17 @@ public class LockActivity extends Activity {
         int targetIndex = Math.max(0, dragPreviewIndex);
         View row = draggingTodoRow;
         row.animate().cancel();
+        int dropDuration = targetIndex == draggingTodoIndex ? 180 : 150;
         float targetTranslation = (targetIndex - draggingTodoIndex) * todoMoveOffset();
+        if (targetIndex == draggingTodoIndex) {
+            animateReorderPreviewToZero(dropDuration);
+        }
         row.animate()
                 .translationY(targetTranslation)
                 .scaleX(1f)
                 .scaleY(1f)
                 .alpha(1f)
-                .setDuration(150)
+                .setDuration(dropDuration)
                 .withEndAction(() -> {
                     if (targetIndex != draggingTodoIndex) {
                         TodoStore.move(LockActivity.this, item.id, targetIndex);
@@ -542,6 +546,17 @@ public class LockActivity extends Activity {
                     resetTodoDragState();
                 })
                 .start();
+    }
+
+    private void animateReorderPreviewToZero(int duration) {
+        for (int i = 0; i < todoList.getChildCount(); i++) {
+            View child = todoList.getChildAt(i);
+            if (child == draggingTodoRow) {
+                continue;
+            }
+            child.animate().cancel();
+            child.animate().translationY(0f).setDuration(duration).start();
+        }
     }
 
     private void cancelTodoDrag() {
