@@ -273,7 +273,7 @@ public class LockActivity extends Activity {
         plusButton.setOnClickListener(v -> toggleInput());
         root.addView(plusButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
+                dp(56)
         ));
 
         inputBlock = new LinearLayout(this);
@@ -973,7 +973,7 @@ public class LockActivity extends Activity {
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             float centerX = getWidth() * 0.5f;
-            float centerY = getHeight() * 0.56f;
+            float centerY = getHeight() * 0.585f;
             float halfLength = dp(9) * (1f + 0.4142f * openProgress);
             canvas.save();
             canvas.rotate(45f * openProgress, centerX, centerY);
@@ -1110,7 +1110,7 @@ public class LockActivity extends Activity {
     private LinearLayout.LayoutParams compactDividerParams() {
         return new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(16)
+                dp(20)
         );
     }
 
