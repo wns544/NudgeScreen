@@ -179,8 +179,8 @@ public class MainActivity extends Activity {
         card.addView(opacityHeader);
 
         SeekBar opacity = new SeekBar(this);
-        opacity.setMax(100);
-        opacity.setProgress(AppSettings.overlayOpacity(this));
+        opacity.setMax(20);
+        opacity.setProgress(Math.round(AppSettings.overlayOpacity(this) / 5f));
         card.addView(opacity, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(48)
@@ -188,8 +188,9 @@ public class MainActivity extends Activity {
         opacity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                AppSettings.setOverlayOpacity(MainActivity.this, progress);
-                opacityValue.setText(progress + "%");
+                int snapped = progress * 5;
+                AppSettings.setOverlayOpacity(MainActivity.this, snapped);
+                opacityValue.setText(snapped + "%");
             }
 
             @Override
@@ -260,17 +261,9 @@ public class MainActivity extends Activity {
         LinearLayout card = card();
         card.addView(sectionTitle("\uc571", null));
 
-        Button preview = outlineButton("\ubbf8\ub9ac\ubcf4\uae30");
-        preview.setOnClickListener(v -> startActivity(new Intent(this, LockActivity.class)));
-        card.addView(preview, fullButtonParams());
-
-        Button notificationSettings = outlineButton("\uc54c\ub9bc \uad8c\ud55c");
-        notificationSettings.setOnClickListener(v -> openNotificationSettings());
-        card.addView(notificationSettings, fullButtonParams());
-
-        Button batterySettings = outlineButton("\ubc30\ud130\ub9ac \uc124\uc815");
-        batterySettings.setOnClickListener(v -> openBatterySettings());
-        card.addView(batterySettings, fullButtonParams());
+        card.addView(actionRow("\ubbf8\ub9ac\ubcf4\uae30", v -> startActivity(new Intent(this, LockActivity.class)), true));
+        card.addView(actionRow("\uc54c\ub9bc \uad8c\ud55c", v -> openNotificationSettings(), false));
+        card.addView(actionRow("\ubc30\ud130\ub9ac \uc124\uc815", v -> openBatterySettings(), false));
 
         return card;
     }
@@ -419,15 +412,38 @@ public class MainActivity extends Activity {
     }
 
     private View divider() {
+        return divider(4);
+    }
+
+    private View divider(int topMarginDp) {
         View view = new View(this);
         view.setBackgroundColor(COLOR_LINE);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 Math.max(1, dp(1))
         );
-        params.topMargin = dp(4);
+        params.topMargin = dp(topMarginDp);
         view.setLayoutParams(params);
         return view;
+    }
+
+    private View actionRow(String label, View.OnClickListener listener, boolean first) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        if (!first) {
+            row.addView(divider(0));
+        }
+
+        TextView textView = text(label, 16, COLOR_INK, false);
+        textView.setGravity(Gravity.CENTER_VERTICAL);
+        textView.setText(label + "  \u203a");
+        textView.setPadding(0, dp(13), 0, dp(12));
+        textView.setOnClickListener(listener);
+        row.addView(textView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(48)
+        ));
+        return row;
     }
 
     private TextView chip(String value, int bgColor, int textColor) {
@@ -443,14 +459,6 @@ public class MainActivity extends Activity {
         Button button = baseButton(label);
         button.setTextColor(0xFFFFFFFF);
         button.setBackground(rounded(COLOR_ACCENT, 8));
-        return button;
-    }
-
-    private Button outlineButton(String label) {
-        Button button = baseButton(label);
-        button.setTextColor(COLOR_INK);
-        button.setGravity(Gravity.CENTER_VERTICAL);
-        button.setBackground(rounded(COLOR_FIELD, 8));
         return button;
     }
 
@@ -492,15 +500,6 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
         params.topMargin = dp(12);
-        return params;
-    }
-
-    private LinearLayout.LayoutParams fullButtonParams() {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        );
-        params.topMargin = dp(10);
         return params;
     }
 
