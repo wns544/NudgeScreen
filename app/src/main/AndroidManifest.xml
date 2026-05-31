@@ -19,19 +19,19 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".LockActivity"
+            android:name="com.example.screenlocktodo.LockActivity"
             android:directBootAware="true"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:showWhenLocked="true"
-            android:taskAffinity="com.example.screenlocktodo.lock"
+            android:taskAffinity="com.wns544.nudgescreen.lock"
             android:theme="@style/LockTheme"
             android:turnScreenOn="true" />
 
         <activity
-            android:name=".MainActivity"
+            android:name="com.example.screenlocktodo.MainActivity"
             android:directBootAware="true"
             android:excludeFromRecents="true"
             android:exported="true">
@@ -42,7 +42,7 @@
         </activity>
 
         <service
-            android:name=".LockMonitorService"
+            android:name="com.example.screenlocktodo.LockMonitorService"
             android:directBootAware="true"
             android:exported="false"
             android:stopWithTask="false"
@@ -53,7 +53,7 @@
         </service>
 
         <receiver
-            android:name=".BootReceiver"
+            android:name="com.example.screenlocktodo.BootReceiver"
             android:directBootAware="true"
             android:enabled="true"
             android:exported="true">
