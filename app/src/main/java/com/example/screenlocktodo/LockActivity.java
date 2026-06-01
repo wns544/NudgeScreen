@@ -62,6 +62,7 @@ public class LockActivity extends Activity {
     private TodoItem lastDeletedItem;
     private int lastDeletedIndex = -1;
     private boolean todosLocked;
+    private String lastRenderedTodoKey;
     private long pendingTapItemId = -1L;
     private long draggingTodoId = -1L;
     private int draggingTodoIndex = -1;
@@ -343,7 +344,6 @@ public class LockActivity extends Activity {
         todoList.setOrientation(LinearLayout.VERTICAL);
         todoList.setGravity(Gravity.CENTER_HORIZONTAL);
         todoList.setPadding(0, dp(11), 0, dp(18));
-        todoList.setLayoutTransition(new android.animation.LayoutTransition());
         root.addView(todoList, narrowParams());
 
         TextView curtainHint = text(curtainHintText(), 14, 0xAFFFFFFF, false);
@@ -449,9 +449,15 @@ public class LockActivity extends Activity {
             return;
         }
 
-        todoList.removeAllViews();
         List<TodoItem> items = TodoStore.load(this);
+        String renderKey = TodoCodec.encode(items) + "|" + todosLocked;
         updateTopTodoDividerVisibility(!items.isEmpty() && inputBlock.getVisibility() != View.VISIBLE);
+        if (renderKey.equals(lastRenderedTodoKey) && todoList.getChildCount() > 0) {
+            return;
+        }
+
+        todoList.removeAllViews();
+        lastRenderedTodoKey = renderKey;
         if (items.isEmpty()) {
             TextView empty = text("\uc624\ub298\uc740 \uc544\uc9c1 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.", 16, 0xBFFFFFFF, false);
             empty.setGravity(Gravity.CENTER);
