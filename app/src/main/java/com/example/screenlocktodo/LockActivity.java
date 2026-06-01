@@ -346,20 +346,9 @@ public class LockActivity extends Activity {
         todoList.setPadding(0, dp(11), 0, dp(18));
         root.addView(todoList, narrowParams());
 
-        TextView curtainHint = text(curtainHintText(), 14, 0xAFFFFFFF, false);
-        curtainHint.setGravity(Gravity.CENTER);
-        curtainHint.setPadding(0, dp(10), 0, dp(8));
-        root.addView(curtainHint, fullWidthWrap());
         curtainContent.addView(menuButton, menuParams);
         curtainContent.addView(menuPanel, panelParams);
         return shell;
-    }
-
-    private String curtainHintText() {
-        if (AppSettings.curtainUnlockBothDirections(this)) {
-            return "\ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c";
-        }
-        return "\uc624\ub978\ucabd\uc73c\ub85c \ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c";
     }
 
     private void updateClock() {
