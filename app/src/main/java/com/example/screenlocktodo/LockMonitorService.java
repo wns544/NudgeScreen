@@ -12,7 +12,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
 
@@ -25,7 +27,13 @@ public class LockMonitorService extends Service {
     static final long QUICK_RESTART_DELAY_MS = 5000L;
     static final long KEEP_ALIVE_DELAY_MS = 5 * 60 * 1000L;
     private static final long LOCK_NOTIFICATION_COOLDOWN_MS = 15000L;
+    private static final long UNLOCK_FROM_SCREEN_OFF_WINDOW_MS = 8000L;
+    private static final long[] SCREEN_ON_RETRY_DELAYS_MS = {250L, 900L};
+    private static final long[] USER_PRESENT_RETRY_DELAYS_MS = {250L, 1000L};
     private long lastLockNotificationAt;
+    private long lastScreenOffAt;
+    private boolean waitingForScreenOffUnlock;
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
         @Override
@@ -36,10 +44,19 @@ public class LockMonitorService extends Service {
             }
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                waitingForScreenOffUnlock = true;
+                lastScreenOffAt = SystemClock.elapsedRealtime();
                 cancelLockNotification(context);
                 TodoStore.warm(context);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
                 showLockScreen(context, true, true, true);
+                scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
+            } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
+                if (wasRecentlyScreenOff()) {
+                    waitingForScreenOffUnlock = false;
+                    showLockScreen(context, false, true, false);
+                    scheduleLockScreenRetries(false, true, false, USER_PRESENT_RETRY_DELAYS_MS);
+                }
             }
         }
     };
@@ -142,6 +159,7 @@ public class LockMonitorService extends Service {
             unregisterReceiver(screenReceiver);
             registered = false;
         }
+        handler.removeCallbacksAndMessages(null);
         if (AppSettings.lockScreenEnabled(this)) {
             scheduleRestart(1200);
             scheduleKeepAlive();
@@ -171,6 +189,7 @@ public class LockMonitorService extends Service {
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_SCREEN_OFF);
         filter.addAction(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_USER_PRESENT);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
@@ -182,6 +201,26 @@ public class LockMonitorService extends Service {
     private boolean isKeyguardLocked(Context context) {
         KeyguardManager keyguardManager = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
         return keyguardManager != null && keyguardManager.isKeyguardLocked();
+    }
+
+    private boolean wasRecentlyScreenOff() {
+        return waitingForScreenOffUnlock
+                && SystemClock.elapsedRealtime() - lastScreenOffAt <= UNLOCK_FROM_SCREEN_OFF_WINDOW_MS;
+    }
+
+    private void scheduleLockScreenRetries(
+            boolean wakeDisplay,
+            boolean allowBeforeKeyguard,
+            boolean allowNotificationFallback,
+            long[] delaysMillis
+    ) {
+        Context appContext = getApplicationContext();
+        for (long delayMillis : delaysMillis) {
+            handler.postDelayed(
+                    () -> showLockScreen(appContext, wakeDisplay, allowBeforeKeyguard, allowNotificationFallback),
+                    delayMillis
+            );
+        }
     }
 
     private void scheduleRestart(long delayMillis) {
