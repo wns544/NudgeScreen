@@ -1,6 +1,7 @@
 package com.example.screenlocktodo;
 
 import android.app.AlarmManager;
+import android.app.ActivityOptions;
 import android.app.KeyguardManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -17,8 +18,12 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.util.Log;
+import android.view.Display;
+import android.hardware.display.DisplayManager;
 
 public class LockMonitorService extends Service {
+    private static final String TAG = "NudgeLockMonitor";
     static final String ACTION_RESTART_MONITOR = "com.example.screenlocktodo.RESTART_MONITOR";
     private static final String SERVICE_CHANNEL_ID = "todo_lock_service_quiet_v1";
     private static final String LOCK_CHANNEL_ID = "todo_lock_fullscreen_v1";
@@ -34,6 +39,23 @@ public class LockMonitorService extends Service {
     private long lastScreenOffAt;
     private boolean waitingForScreenOffUnlock;
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private DisplayManager displayManager;
+    private final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener() {
+        @Override
+        public void onDisplayAdded(int displayId) {
+        }
+
+        @Override
+        public void onDisplayRemoved(int displayId) {
+        }
+
+        @Override
+        public void onDisplayChanged(int displayId) {
+            if (displayId == Display.DEFAULT_DISPLAY) {
+                handleDefaultDisplayState();
+            }
+        }
+    };
 
     private final BroadcastReceiver screenReceiver = new BroadcastReceiver() {
         @Override
@@ -44,18 +66,21 @@ public class LockMonitorService extends Service {
             }
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
+                Log.i(TAG, "screen off");
                 waitingForScreenOffUnlock = true;
                 lastScreenOffAt = SystemClock.elapsedRealtime();
                 cancelLockNotification(context);
                 TodoStore.warm(context);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                Log.i(TAG, "screen on");
                 showLockScreen(context, true, true, true);
                 scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
             } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
+                Log.i(TAG, "user present recentScreenOff=" + wasRecentlyScreenOff());
                 if (wasRecentlyScreenOff()) {
                     waitingForScreenOffUnlock = false;
-                    showLockScreen(context, false, true, false);
-                    scheduleLockScreenRetries(false, true, false, USER_PRESENT_RETRY_DELAYS_MS);
+                    showLockScreen(context, false, true, true);
+                    scheduleLockScreenRetries(false, true, true, USER_PRESENT_RETRY_DELAYS_MS);
                 }
             }
         }
@@ -132,6 +157,7 @@ public class LockMonitorService extends Service {
         }
         createNotificationChannels();
         registerScreenReceiver();
+        registerDisplayListener();
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
         TodoStore.warm(this);
         scheduleKeepAlive();
@@ -147,6 +173,7 @@ public class LockMonitorService extends Service {
         }
         createNotificationChannels();
         registerScreenReceiver();
+        registerDisplayListener();
         startForeground(SERVICE_NOTIFICATION_ID, buildServiceNotification());
         TodoStore.warm(this);
         scheduleKeepAlive();
@@ -158,6 +185,10 @@ public class LockMonitorService extends Service {
         if (registered) {
             unregisterReceiver(screenReceiver);
             registered = false;
+        }
+        if (displayManager != null) {
+            displayManager.unregisterDisplayListener(displayListener);
+            displayManager = null;
         }
         handler.removeCallbacksAndMessages(null);
         if (AppSettings.lockScreenEnabled(this)) {
@@ -196,6 +227,41 @@ public class LockMonitorService extends Service {
             registerReceiver(screenReceiver, filter);
         }
         registered = true;
+    }
+
+    private void registerDisplayListener() {
+        if (displayManager != null) {
+            return;
+        }
+        displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        if (displayManager != null) {
+            displayManager.registerDisplayListener(displayListener, handler);
+            handleDefaultDisplayState();
+        }
+    }
+
+    private void handleDefaultDisplayState() {
+        if (displayManager == null) {
+            return;
+        }
+        Display display = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        if (display == null) {
+            return;
+        }
+
+        int state = display.getState();
+        if (state == Display.STATE_OFF || state == Display.STATE_DOZE || state == Display.STATE_DOZE_SUSPEND) {
+            Log.i(TAG, "display resting state=" + state);
+            waitingForScreenOffUnlock = true;
+            lastScreenOffAt = SystemClock.elapsedRealtime();
+            cancelLockNotification(this);
+            TodoStore.warm(this);
+        } else if (state == Display.STATE_ON && wasRecentlyScreenOff()) {
+            Log.i(TAG, "display on after resting state");
+            waitingForScreenOffUnlock = false;
+            showLockScreen(this, false, true, true);
+            scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
+        }
     }
 
     private boolean isKeyguardLocked(Context context) {
@@ -320,11 +386,7 @@ public class LockMonitorService extends Service {
             wakeLock.acquire(3000);
         }
 
-        try {
-            context.startActivity(lockIntent);
-            cancelLockNotification(context);
-        } catch (RuntimeException ignored) {
-        }
+        launchLockActivity(context, lockIntent);
 
         if (!allowNotificationFallback) {
             return;
@@ -360,6 +422,43 @@ public class LockMonitorService extends Service {
         NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
             manager.notify(LOCK_NOTIFICATION_ID, notification);
+        }
+    }
+
+    private void launchLockActivity(Context context, Intent lockIntent) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            try {
+                PendingIntent pendingIntent = PendingIntent.getActivity(
+                        context,
+                        2,
+                        lockIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                );
+                ActivityOptions options = ActivityOptions.makeBasic();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                    options.setPendingIntentBackgroundActivityStartMode(
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
+                    );
+                } else {
+                    options.setPendingIntentBackgroundActivityStartMode(
+                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                    );
+                }
+                pendingIntent.send(context, 0, null, null, null, null, options.toBundle());
+                Log.i(TAG, "sent lock activity pending intent with BAL allowed");
+                cancelLockNotification(context);
+                return;
+            } catch (PendingIntent.CanceledException | RuntimeException e) {
+                Log.w(TAG, "pending intent lock launch failed", e);
+            }
+        }
+
+        try {
+            context.startActivity(lockIntent);
+            Log.i(TAG, "started lock activity directly");
+            cancelLockNotification(context);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "direct lock launch failed", e);
         }
     }
 
