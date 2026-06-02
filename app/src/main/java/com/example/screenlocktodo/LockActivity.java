@@ -312,7 +312,7 @@ public class LockActivity extends Activity {
 
         input = new EditText(this);
         input.setSingleLine(true);
-        input.setHint("\uc0c8 \ud560\uc77c");
+        input.setHint(getString(R.string.new_todo_hint));
         input.setGravity(Gravity.CENTER);
         input.setTextColor(0xFFFFFFFF);
         input.setHintTextColor(0x99FFFFFF);
@@ -448,7 +448,7 @@ public class LockActivity extends Activity {
         todoList.removeAllViews();
         lastRenderedTodoKey = renderKey;
         if (items.isEmpty()) {
-            TextView empty = text("\uc624\ub298\uc740 \uc544\uc9c1 \ube44\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.", 16, 0xBFFFFFFF, false);
+            TextView empty = text(getString(R.string.empty_todos_lock), 16, 0xBFFFFFFF, false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(28), 0, dp(24));
             todoList.addView(empty);
@@ -792,7 +792,7 @@ public class LockActivity extends Activity {
         panel.setPadding(dp(22), dp(20), dp(22), dp(16));
         panel.setBackground(rounded(0xEE171717, dp(18)));
 
-        TextView title = text("\ud560\uc77c \uc218\uc815", 17, 0xF2FFFFFF, true);
+        TextView title = text(getString(R.string.edit_todo), 17, 0xF2FFFFFF, true);
         title.setGravity(Gravity.CENTER);
         panel.addView(title, fullWidthWrap());
 
@@ -823,12 +823,12 @@ public class LockActivity extends Activity {
         actionsParams.topMargin = dp(10);
         panel.addView(actions, actionsParams);
 
-        TextView cancel = text("\ucde8\uc18c", 15, 0xAAFFFFFF, false);
+        TextView cancel = text(getString(R.string.cancel), 15, 0xAAFFFFFF, false);
         cancel.setGravity(Gravity.CENTER);
         cancel.setOnClickListener(v -> dialog.dismiss());
         actions.addView(cancel, new LinearLayout.LayoutParams(dp(70), dp(44)));
 
-        TextView save = text("\uc800\uc7a5", 15, 0xF2FFFFFF, true);
+        TextView save = text(getString(R.string.save), 15, 0xF2FFFFFF, true);
         save.setGravity(Gravity.CENTER);
         save.setOnClickListener(v -> {
             TodoStore.setText(this, item.id, editor.getText().toString());
@@ -1560,11 +1560,11 @@ public class LockActivity extends Activity {
                         rowView.setTranslationX(moveDx * 0.82f);
                         rowView.setAlpha(1f);
                         if (moveDx < 0) {
-                            actionHint.setText("\uc644\ub8cc");
+                            actionHint.setText(getString(R.string.todo_done_action));
                             actionHint.setTextColor(0xCC9BE7C2);
                             rowView.setBackgroundColor(0x1822B573);
                         } else {
-                            actionHint.setText("\uc0ad\uc81c");
+                            actionHint.setText(getString(R.string.delete));
                             actionHint.setTextColor(0xFFFFB3A8);
                             rowView.setBackgroundColor(0x22C24132);
                         }
@@ -1597,14 +1597,14 @@ public class LockActivity extends Activity {
                         return true;
                     }
                     if (dx < 0) {
-                        actionHint.setText("\uc644\ub8cc");
+                        actionHint.setText(getString(R.string.todo_done_action));
                         actionHint.setTextColor(0xCC9BE7C2);
                         animateThen(rowView, -rowView.getWidth(), () -> {
                             TodoStore.setDone(LockActivity.this, item.id, true);
                             refreshTodos();
                         });
                     } else {
-                        actionHint.setText("\uc0ad\uc81c");
+                        actionHint.setText(getString(R.string.delete));
                         actionHint.setTextColor(0xFFFFB3A8);
                         animateDeleteTodo(item, index, rowView);
                     }

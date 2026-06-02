@@ -12,7 +12,6 @@ final class TodoStore {
     private static final String KEY_ITEMS = "items";
     private static final String KEY_MIGRATED = "migrated_to_device_protected";
     private static final String KEY_TUTORIAL_SEEDED = "unlock_tutorial_seeded";
-    private static final String UNLOCK_TUTORIAL_TEXT = "\ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c";
     private static List<TodoItem> cachedItems;
 
     private TodoStore() {
@@ -26,7 +25,7 @@ final class TodoStore {
         Context storeContext = storageContext(context);
         migrateIfNeeded(context, storeContext);
         SharedPreferences prefs = storeContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        seedUnlockTutorialIfNeeded(prefs);
+        seedUnlockTutorialIfNeeded(context, prefs);
         String raw = prefs.getString(KEY_ITEMS, "[]");
 
         try {
@@ -133,13 +132,13 @@ final class TodoStore {
         cachedItems = new ArrayList<>(items);
     }
 
-    private static void seedUnlockTutorialIfNeeded(SharedPreferences prefs) {
+    private static void seedUnlockTutorialIfNeeded(Context context, SharedPreferences prefs) {
         if (prefs.getBoolean(KEY_TUTORIAL_SEEDED, false) || prefs.contains(KEY_ITEMS)) {
             return;
         }
 
         List<TodoItem> tutorialItems = new ArrayList<>();
-        tutorialItems.add(new TodoItem(System.currentTimeMillis(), UNLOCK_TUTORIAL_TEXT, false));
+        tutorialItems.add(new TodoItem(System.currentTimeMillis(), context.getString(R.string.unlock_tutorial_todo), false));
         prefs.edit()
                 .putString(KEY_ITEMS, TodoCodec.encode(tutorialItems))
                 .putBoolean(KEY_TUTORIAL_SEEDED, true)

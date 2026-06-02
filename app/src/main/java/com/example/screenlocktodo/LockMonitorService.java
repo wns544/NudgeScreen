@@ -132,6 +132,7 @@ public class LockMonitorService extends Service {
                 restartIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
+
         long triggerAt = SystemClock.elapsedRealtime() + delayMillis;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             alarmManager.setAndAllowWhileIdle(
@@ -350,8 +351,8 @@ public class LockMonitorService extends Service {
 
         return new Notification.Builder(this, SERVICE_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_lock_todo)
-                .setContentTitle("Todo Lock 실행 중")
-                .setContentText("화면이 켜지면 할일 커튼을 표시합니다.")
+                .setContentTitle(getString(R.string.service_notification_title))
+                .setContentText(getString(R.string.service_notification_text))
                 .setContentIntent(contentIntent)
                 .setDefaults(0)
                 .setSound(null)
@@ -407,8 +408,8 @@ public class LockMonitorService extends Service {
 
         Notification notification = new Notification.Builder(context, LOCK_CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_lock_todo)
-                .setContentTitle("오늘 할일 확인")
-                .setContentText("잠금 해제 전에 할일을 확인하세요.")
+                .setContentTitle(context.getString(R.string.lock_notification_title))
+                .setContentText(context.getString(R.string.lock_notification_text))
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setFullScreenIntent(fullScreenIntent, true)
@@ -469,20 +470,20 @@ public class LockMonitorService extends Service {
 
         NotificationChannel serviceChannel = new NotificationChannel(
                 SERVICE_CHANNEL_ID,
-                "Todo Lock 실행 상태",
+                getString(R.string.service_channel_name),
                 NotificationManager.IMPORTANCE_LOW
         );
-        serviceChannel.setDescription("화면 켜짐을 감지하기 위한 조용한 상태 알림입니다.");
+        serviceChannel.setDescription(getString(R.string.service_channel_description));
         serviceChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
         serviceChannel.setSound(null, null);
         serviceChannel.enableVibration(false);
 
         NotificationChannel lockChannel = new NotificationChannel(
                 LOCK_CHANNEL_ID,
-                "Todo Lock 커튼",
+                getString(R.string.lock_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
         );
-        lockChannel.setDescription("잠금화면 위에 할일 커튼을 띄우기 위한 알림입니다.");
+        lockChannel.setDescription(getString(R.string.lock_channel_description));
         lockChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
         NotificationManager manager = getSystemService(NotificationManager.class);

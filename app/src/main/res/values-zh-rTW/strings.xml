@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nudge Todo</string>
+    <string name="status_running">執行中</string>
+    <string name="status_paused">已暫停</string>
+    <string name="curtain_both">雙向簾幕</string>
+    <string name="curtain_right">右側簾幕</string>
+    <string name="section_lock_screen">鎖定畫面</string>
+    <string name="lock_screen_enabled">使用鎖定畫面</string>
+    <string name="lock_screen_enabled_desc">開啟螢幕時會顯示待辦簾幕。</string>
+    <string name="overlay_opacity">背景暗度</string>
+    <string name="unlock_both_directions">可向任一方向滑動解鎖</string>
+    <string name="section_todos">待辦事項</string>
+    <string name="todo_input_hint">要顯示在鎖定畫面的待辦事項</string>
+    <string name="add">新增</string>
+    <string name="settings">設定</string>
+    <string name="preview">預覽</string>
+    <string name="notification_permission">通知權限</string>
+    <string name="battery_help_title">待辦簾幕經常停止嗎？</string>
+    <string name="battery_unrestricted_action">設定不受限制的電池用量</string>
+    <string name="close">關閉</string>
+    <string name="empty_todos_main">尚無待辦事項。</string>
+    <string name="delete">刪除</string>
+    <string name="battery_guide_title">建議使用不受限制的電池設定</string>
+    <string name="battery_guide_body">如果 Android 為了省電而停止此應用程式，開啟螢幕時待辦簾幕可能會延遲顯示或停止。將電池用量設定為不受限制可讓它更穩定。</string>
+    <string name="later">稍後</string>
+    <string name="open_settings">開啟設定</string>
+    <string name="unlock_tutorial_todo">滑動以解鎖</string>
+    <string name="new_todo_hint">新增待辦</string>
+    <string name="empty_todos_lock">目前沒有內容。</string>
+    <string name="todo_done_action">完成</string>
+    <string name="edit_todo">編輯待辦</string>
+    <string name="cancel">取消</string>
+    <string name="save">儲存</string>
+    <string name="service_notification_title">Nudge Todo 執行中</string>
+    <string name="service_notification_text">開啟螢幕時會顯示待辦簾幕。</string>
+    <string name="lock_notification_title">查看今天的待辦</string>
+    <string name="lock_notification_text">解鎖前先查看待辦事項。</string>
+    <string name="service_channel_name">Nudge Todo 狀態</string>
+    <string name="service_channel_description">用於偵測螢幕喚醒事件的安靜狀態通知。</string>
+    <string name="lock_channel_name">Nudge Todo 簾幕</string>
+    <string name="lock_channel_description">用於在鎖定畫面上顯示待辦簾幕的通知。</string>
+</resources>

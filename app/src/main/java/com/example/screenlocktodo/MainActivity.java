@@ -189,7 +189,7 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
-        TextView title = text("\uc7a0\uae50, \ud560 \uc77c", 34, COLOR_INK, true);
+        TextView title = text(getString(R.string.app_name), 34, COLOR_INK, true);
         title.setTypeface(Typeface.create("serif", Typeface.BOLD));
         titleRow.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
@@ -202,8 +202,8 @@ public class MainActivity extends Activity {
         chips.setOrientation(LinearLayout.HORIZONTAL);
         chips.setGravity(Gravity.LEFT);
         chips.setPadding(0, dp(12), 0, 0);
-        chips.addView(chip(AppSettings.lockScreenEnabled(this) ? "\uc2e4\ud589 \uc911" : "\uc77c\uc2dc\uc911\uc9c0", 0x267FA88A, COLOR_GREEN));
-        TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? "\uc88c\uc6b0 \ucee4\ud2bc" : "\uc624\ub978\ucabd \ucee4\ud2bc", 0x266E8FBF, COLOR_ACCENT);
+        chips.addView(chip(AppSettings.lockScreenEnabled(this) ? getString(R.string.status_running) : getString(R.string.status_paused), 0x267FA88A, COLOR_GREEN));
+        TextView second = chip(AppSettings.curtainUnlockBothDirections(this) ? getString(R.string.curtain_both) : getString(R.string.curtain_right), 0x266E8FBF, COLOR_ACCENT);
         LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 dp(34)
@@ -217,7 +217,7 @@ public class MainActivity extends Activity {
 
     private View lockSettingsCard() {
         LinearLayout card = card();
-        card.addView(sectionTitle("\uc7a0\uae08\ud654\uba74", null));
+        card.addView(sectionTitle(getString(R.string.section_lock_screen), null));
 
         LinearLayout enabledRow = new LinearLayout(this);
         enabledRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -226,8 +226,8 @@ public class MainActivity extends Activity {
 
         LinearLayout enabledCopy = new LinearLayout(this);
         enabledCopy.setOrientation(LinearLayout.VERTICAL);
-        TextView enabledTitle = text("\uc7a0\uae08\ud654\uba74 \uc0ac\uc6a9", 16, COLOR_INK, false);
-        TextView enabledSubtitle = text("\ud654\uba74\uc744 \ucf1c\uba74 \ud560 \uc77c \ucee4\ud2bc\uc774 \ub098\ud0c0\ub0a9\ub2c8\ub2e4.", 13, COLOR_MUTED, false);
+        TextView enabledTitle = text(getString(R.string.lock_screen_enabled), 16, COLOR_INK, false);
+        TextView enabledSubtitle = text(getString(R.string.lock_screen_enabled_desc), 13, COLOR_MUTED, false);
         enabledSubtitle.setPadding(0, dp(3), dp(10), 0);
         enabledCopy.addView(enabledTitle);
         enabledCopy.addView(enabledSubtitle);
@@ -253,7 +253,7 @@ public class MainActivity extends Activity {
         opacityHeader.setGravity(Gravity.CENTER_VERTICAL);
         opacityHeader.setOrientation(LinearLayout.HORIZONTAL);
         opacityHeader.setPadding(0, dp(12), 0, 0);
-        opacityHeader.addView(text("\ubc30\uacbd \uc5b4\ub461\uae30", 16, COLOR_INK, false),
+        opacityHeader.addView(text(getString(R.string.overlay_opacity), 16, COLOR_INK, false),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
         opacityValue = text(AppSettings.overlayOpacity(this) + "%", 16, COLOR_ACCENT, false);
         opacityValue.setGravity(Gravity.RIGHT);
@@ -287,7 +287,7 @@ public class MainActivity extends Activity {
         card.addView(divider());
 
         CheckBox curtainBothDirections = new CheckBox(this);
-        curtainBothDirections.setText("\uc591\ubc29\ud5a5 \ubc00\uc5b4\uc11c \uc7a0\uae08\ud574\uc81c");
+        curtainBothDirections.setText(getString(R.string.unlock_both_directions));
         curtainBothDirections.setTextSize(15);
         curtainBothDirections.setTextColor(COLOR_INK);
         curtainBothDirections.setPadding(0, dp(10), 0, dp(2));
@@ -304,7 +304,7 @@ public class MainActivity extends Activity {
 
     private View todoCard() {
         LinearLayout card = card();
-        card.addView(sectionTitle("\ud560 \uc77c", null));
+        card.addView(sectionTitle(getString(R.string.section_todos), null));
 
         LinearLayout inputRow = new LinearLayout(this);
         inputRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -317,7 +317,7 @@ public class MainActivity extends Activity {
 
         input = new EditText(this);
         input.setSingleLine(true);
-        input.setHint("\uc7a0\uae08\ud654\uba74\uc5d0 \ub744\uc6b8 \ud560\uc77c");
+        input.setHint(getString(R.string.todo_input_hint));
         input.setTextColor(COLOR_INK);
         input.setHintTextColor(0x99667085);
         input.setTextSize(15);
@@ -325,7 +325,7 @@ public class MainActivity extends Activity {
         input.setBackground(rounded(COLOR_FIELD, 8));
         inputRow.addView(input, new LinearLayout.LayoutParams(0, dp(50), 1));
 
-        Button add = filledButton("\ucd94\uac00");
+        Button add = filledButton(getString(R.string.add));
         add.setOnClickListener(v -> addTodo());
         LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(82), dp(50));
         addParams.leftMargin = dp(8);
@@ -367,28 +367,28 @@ public class MainActivity extends Activity {
             drawerPanel.setElevation(dp(12));
         }
 
-        TextView title = text("\uc124\uc815", 28, COLOR_INK, true);
+        TextView title = text(getString(R.string.settings), 28, COLOR_INK, true);
         title.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         drawerPanel.addView(title);
 
-        TextView subtitle = text("\uc7a0\uae50, \ud560 \uc77c", 14, COLOR_MUTED, false);
+        TextView subtitle = text(getString(R.string.app_name), 14, COLOR_MUTED, false);
         subtitle.setPadding(0, dp(4), 0, dp(18));
         drawerPanel.addView(subtitle);
 
-        drawerPanel.addView(actionRow("\ubbf8\ub9ac\ubcf4\uae30", v -> {
+        drawerPanel.addView(actionRow(getString(R.string.preview), v -> {
             closeDrawer();
             startActivity(new Intent(this, LockActivity.class));
         }, true));
-        drawerPanel.addView(actionRow("\uc54c\ub9bc \uad8c\ud55c", v -> {
+        drawerPanel.addView(actionRow(getString(R.string.notification_permission), v -> {
             closeDrawer();
             openNotificationSettings();
         }, false));
-        drawerPanel.addView(drawerSectionTitle("\ud560\uc77c \ucee4\ud2bc\uc774 \uc790\uafb8 \uc885\ub8cc\ub418\ub098\uc694?"));
-        drawerPanel.addView(actionRow("\ubc30\ud130\ub9ac \uc81c\ud55c\uc5c6\uc74c \uc124\uc815\ud558\uae30", v -> {
+        drawerPanel.addView(drawerSectionTitle(getString(R.string.battery_help_title)));
+        drawerPanel.addView(actionRow(getString(R.string.battery_unrestricted_action), v -> {
             closeDrawer();
             showBatteryGuideDialog(false);
         }, false));
-        drawerPanel.addView(actionRow("\ub2eb\uae30", v -> closeDrawer(), false));
+        drawerPanel.addView(actionRow(getString(R.string.close), v -> closeDrawer(), false));
 
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
                 panelWidth,
@@ -696,7 +696,7 @@ public class MainActivity extends Activity {
         todoList.removeAllViews();
         List<TodoItem> items = TodoStore.load(this);
         if (items.isEmpty()) {
-            TextView empty = text("\uc544\uc9c1 \ud560\uc77c\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.", 15, COLOR_MUTED, false);
+            TextView empty = text(getString(R.string.empty_todos_main), 15, COLOR_MUTED, false);
             empty.setGravity(Gravity.CENTER);
             empty.setPadding(0, dp(24), 0, dp(18));
             empty.setBackground(rounded(COLOR_FIELD, 8));
@@ -739,7 +739,7 @@ public class MainActivity extends Activity {
         }
         row.addView(label, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
-        Button delete = quietButton("\uc0ad\uc81c", COLOR_DANGER);
+        Button delete = quietButton(getString(R.string.delete), COLOR_DANGER);
         delete.setOnClickListener(v -> {
             TodoStore.remove(this, item.id);
             refreshTodos();
@@ -799,11 +799,11 @@ public class MainActivity extends Activity {
         box.setPadding(dp(20), dp(20), dp(20), dp(16));
         box.setBackground(rounded(COLOR_PANEL, 12));
 
-        TextView title = text("\ubc30\ud130\ub9ac \uc81c\ud55c\uc5c6\uc74c\uc774 \ud544\uc694\ud574\uc694", 20, COLOR_INK, true);
+        TextView title = text(getString(R.string.battery_guide_title), 20, COLOR_INK, true);
         box.addView(title);
 
         TextView body = text(
-                "Android\uac00 \ubc30\ud130\ub9ac\ub97c \uc544\ub07c\ub824\uace0 \uc571\uc744 \uba48\ucd94\uba74 \ud654\uba74\uc744 \ucf30\uc744 \ub54c \ud560\uc77c \ucee4\ud2bc\uc774 \ub2a6\uac8c \ub728\uac70\ub098 \uc885\ub8cc\ub420 \uc218 \uc788\uc5b4\uc694. \uc124\uc815\uc5d0\uc11c \ubc30\ud130\ub9ac \uc0ac\uc6a9\ub7c9\uc744 '\uc81c\ud55c \uc5c6\uc74c'\uc73c\ub85c \ubc14\uafd4\ub450\uba74 \ub354 \uc548\uc815\uc801\uc73c\ub85c \uc791\ub3d9\ud569\ub2c8\ub2e4.",
+                getString(R.string.battery_guide_body),
                 15,
                 COLOR_MUTED,
                 false
@@ -815,7 +815,7 @@ public class MainActivity extends Activity {
         buttons.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
 
-        Button later = quietButton("\ub098\uc911\uc5d0", COLOR_MUTED);
+        Button later = quietButton(getString(R.string.later), COLOR_MUTED);
         later.setOnClickListener(v -> {
             if (firstRun) {
                 AppSettings.setBatteryGuideShown(this, true);
@@ -824,7 +824,7 @@ public class MainActivity extends Activity {
         });
         buttons.addView(later, new LinearLayout.LayoutParams(dp(88), dp(44)));
 
-        Button settings = filledButton("\uc124\uc815\uc73c\ub85c \uc774\ub3d9");
+        Button settings = filledButton(getString(R.string.open_settings));
         settings.setOnClickListener(v -> {
             if (firstRun) {
                 AppSettings.setBatteryGuideShown(this, true);
