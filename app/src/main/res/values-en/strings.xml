@@ -47,4 +47,6 @@
     <string name="diagnostics_clear">Clear</string>
     <string name="diagnostics_empty">No diagnostic log entries yet.</string>
     <string name="diagnostics_share_subject">Nudge Screen diagnostic log</string>
+    <string name="device_admin_description">Used to turn off the screen with a double tap on the lock curtain.</string>
+    <string name="device_admin_explanation">Allows Nudge Screen to turn off the screen when you double-tap an empty area of the lock curtain.</string>
 </resources>

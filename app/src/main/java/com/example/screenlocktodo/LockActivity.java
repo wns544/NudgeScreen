@@ -4,7 +4,9 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.KeyguardManager;
+import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -42,6 +44,7 @@ import java.util.Locale;
 public class LockActivity extends Activity {
     static final String EXTRA_TURN_SCREEN_ON = "com.example.screenlocktodo.TURN_SCREEN_ON";
     private static final long TODO_DOUBLE_TAP_MS = 420L;
+    private static final long CURTAIN_DOUBLE_TAP_MS = 360L;
 
     private LinearLayout todoList;
     private LinearLayout inputBlock;
@@ -1233,6 +1236,25 @@ public class LockActivity extends Activity {
         }
     }
 
+    private void lockNowFromCurtainDoubleTap() {
+        DiagnosticLog.record(this, "NudgeLockActivity", "curtain double tap lock requested");
+        DevicePolicyManager devicePolicyManager = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
+        ComponentName admin = new ComponentName(this, NudgeDeviceAdminReceiver.class);
+        if (devicePolicyManager != null && devicePolicyManager.isAdminActive(admin)) {
+            devicePolicyManager.lockNow();
+            return;
+        }
+
+        Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, getString(R.string.device_admin_explanation));
+        try {
+            startActivity(intent);
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "device admin request failed", e);
+        }
+    }
+
     private void closeLockTask() {
         DiagnosticLog.record(this, "NudgeLockActivity", "close lock task");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1313,6 +1335,7 @@ public class LockActivity extends Activity {
     private final class CurtainFrameLayout extends FrameLayout {
         private float downX;
         private float downY;
+        private long lastTapAt;
         private boolean curtainSwiping;
         private boolean curtainBlocked;
 
@@ -1329,6 +1352,7 @@ public class LockActivity extends Activity {
                     curtainSwiping = false;
                     curtainBlocked = (!todosLocked && isInsideTodoGestureTarget(event))
                             || isInside(inputBlock, event)
+                            || isInside(plusButton, event)
                             || isInside(menuButton, event)
                             || isInside(menuPanel, event);
                     animate().cancel();
@@ -1368,11 +1392,27 @@ public class LockActivity extends Activity {
                         curtainSwiping = false;
                         return true;
                     }
+                    if (event.getActionMasked() == MotionEvent.ACTION_UP
+                            && !curtainBlocked
+                            && isCurtainTap(event)) {
+                        long now = SystemClock.elapsedRealtime();
+                        if (now - lastTapAt <= CURTAIN_DOUBLE_TAP_MS) {
+                            lastTapAt = 0L;
+                            lockNowFromCurtainDoubleTap();
+                            return true;
+                        }
+                        lastTapAt = now;
+                    }
                     break;
                 default:
                     break;
             }
             return super.dispatchTouchEvent(event);
+        }
+
+        private boolean isCurtainTap(MotionEvent event) {
+            return Math.abs(event.getRawX() - downX) <= dp(10)
+                    && Math.abs(event.getRawY() - downY) <= dp(10);
         }
 
         private void releaseCurtain(float dx) {

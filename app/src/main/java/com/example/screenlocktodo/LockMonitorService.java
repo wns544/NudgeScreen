@@ -322,8 +322,7 @@ public class LockMonitorService extends Service {
             return;
         }
         lastPreArmAt = now;
-        DiagnosticLog.record(context, TAG, "pre-arm lock screen");
-        showLockScreen(context, false, true, false);
+        DiagnosticLog.record(context, TAG, "pre-arm skipped; screen-off activity launch disabled");
     }
 
     static void cancelLockNotification(Context context) {
