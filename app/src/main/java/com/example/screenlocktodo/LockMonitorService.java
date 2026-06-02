@@ -36,7 +36,9 @@ public class LockMonitorService extends Service {
     private static final long UNLOCK_FROM_SCREEN_OFF_WINDOW_MS = 8000L;
     private static final long[] SCREEN_ON_RETRY_DELAYS_MS = {250L, 900L};
     private static final long[] USER_PRESENT_RETRY_DELAYS_MS = {250L, 1000L};
+    private static final long PRE_ARM_COOLDOWN_MS = 2500L;
     private long lastLockNotificationAt;
+    private long lastPreArmAt;
     private long lastScreenOffAt;
     private boolean waitingForScreenOffUnlock;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -72,6 +74,7 @@ public class LockMonitorService extends Service {
                 lastScreenOffAt = SystemClock.elapsedRealtime();
                 cancelLockNotification(context);
                 TodoStore.warm(context);
+                preArmLockScreen(context);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
                 Log.i(TAG, "screen on");
                 showLockScreen(context, true, true, true);
@@ -258,6 +261,7 @@ public class LockMonitorService extends Service {
             lastScreenOffAt = SystemClock.elapsedRealtime();
             cancelLockNotification(this);
             TodoStore.warm(this);
+            preArmLockScreen(this);
         } else if (state == Display.STATE_ON && wasRecentlyScreenOff()) {
             Log.i(TAG, "display on after resting state");
             waitingForScreenOffUnlock = false;
@@ -297,6 +301,15 @@ public class LockMonitorService extends Service {
 
     private void scheduleKeepAlive() {
         scheduleRestart(KEEP_ALIVE_DELAY_MS);
+    }
+
+    private void preArmLockScreen(Context context) {
+        long now = SystemClock.elapsedRealtime();
+        if (now - lastPreArmAt < PRE_ARM_COOLDOWN_MS) {
+            return;
+        }
+        lastPreArmAt = now;
+        showLockScreen(context, false, true, false);
     }
 
     static void cancelLockNotification(Context context) {
