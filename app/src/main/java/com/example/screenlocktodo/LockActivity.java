@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -1221,6 +1222,7 @@ public class LockActivity extends Activity {
     private final class UndoButtonView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF arcBounds = new RectF();
+        private final Path arrowHead = new Path();
         private boolean active;
 
         UndoButtonView(Context context) {
@@ -1245,15 +1247,22 @@ public class LockActivity extends Activity {
             paint.setColor(active ? 0xDFFFFFFF : 0x55FFFFFF);
 
             float cx = getWidth() * 0.5f;
-            float cy = getHeight() * 0.5f + dp(1);
-            float radius = dp(8.5f);
+            float cy = getHeight() * 0.5f;
+            float radius = dp(9.5f);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2.2f));
             arcBounds.set(cx - radius, cy - radius, cx + radius, cy + radius);
-            canvas.drawArc(arcBounds, 205, 250, false, paint);
+            canvas.drawArc(arcBounds, 125, 285, false, paint);
 
-            float arrowX = cx - dp(8);
-            float arrowY = cy - dp(6);
-            canvas.drawLine(arrowX, arrowY, arrowX - dp(5), arrowY, paint);
-            canvas.drawLine(arrowX, arrowY, arrowX, arrowY - dp(5), paint);
+            float arrowX = cx - dp(8.4f);
+            float arrowY = cy - dp(5.2f);
+            arrowHead.reset();
+            arrowHead.moveTo(arrowX, arrowY);
+            arrowHead.lineTo(arrowX + dp(7.2f), arrowY - dp(1.2f));
+            arrowHead.lineTo(arrowX + dp(2.2f), arrowY + dp(6.1f));
+            arrowHead.close();
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawPath(arrowHead, paint);
         }
     }
 
