@@ -41,4 +41,10 @@
     <string name="lock_channel_name">잠깐, 할 일 커튼</string>
     <string name="lock_channel_description">잠금화면 위에 할 일 커튼을 띄우기 위한 알림입니다.</string>
     <string name="beta_version_label">베타버전 · %1$s</string>
+    <string name="diagnostics_button">진단 로그</string>
+    <string name="diagnostics_title">진단 로그</string>
+    <string name="diagnostics_send">전송</string>
+    <string name="diagnostics_clear">비우기</string>
+    <string name="diagnostics_empty">아직 기록된 진단 로그가 없습니다.</string>
+    <string name="diagnostics_share_subject">잠깐, 할 일 진단 로그</string>
 </resources>

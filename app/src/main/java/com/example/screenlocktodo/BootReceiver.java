@@ -3,7 +3,6 @@ package com.example.screenlocktodo;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 public class BootReceiver extends BroadcastReceiver {
     private static final String TAG = "NudgeBootReceiver";
@@ -22,11 +21,11 @@ public class BootReceiver extends BroadcastReceiver {
                 || LockMonitorService.ACTION_RESTART_MONITOR.equals(action)) {
             AppSettings.applyLockScreenRecovery(context);
             if (AppSettings.lockScreenEnabled(context)) {
-                Log.i(TAG, "starting monitor from action=" + action);
+                DiagnosticLog.record(context, TAG, "starting monitor from action=" + action);
                 LockMonitorService.start(context);
                 LockMonitorService.scheduleRestart(context, LockMonitorService.KEEP_ALIVE_DELAY_MS);
             } else {
-                Log.i(TAG, "stopping monitor from action=" + action);
+                DiagnosticLog.record(context, TAG, "stopping monitor from action=" + action);
                 LockMonitorService.stop(context);
             }
         }

@@ -41,4 +41,10 @@
     <string name="lock_channel_name">Nudge Screen curtain</string>
     <string name="lock_channel_description">Notification for showing the todo curtain over the lock screen.</string>
     <string name="beta_version_label">Beta · %1$s</string>
+    <string name="diagnostics_button">Diagnostic log</string>
+    <string name="diagnostics_title">Diagnostic log</string>
+    <string name="diagnostics_send">Send</string>
+    <string name="diagnostics_clear">Clear</string>
+    <string name="diagnostics_empty">No diagnostic log entries yet.</string>
+    <string name="diagnostics_share_subject">Nudge Screen diagnostic log</string>
 </resources>

@@ -88,6 +88,7 @@ public class LockActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         configureLockWindow();
         super.onCreate(savedInstanceState);
+        DiagnosticLog.recordAppState(this, "lock activity onCreate turnScreenOn=" + getIntent().getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
         LockMonitorService.cancelLockNotification(this);
         registerBackHandler();
         setContentView(buildContent());
@@ -113,6 +114,7 @@ public class LockActivity extends Activity {
     protected void onNewIntent(android.content.Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        DiagnosticLog.recordAppState(this, "lock activity onNewIntent turnScreenOn=" + intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
         configureLockWindow();
         LockMonitorService.cancelLockNotification(this);
         updateClock();
@@ -122,6 +124,7 @@ public class LockActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        DiagnosticLog.recordAppState(this, "lock activity onResume");
         LockMonitorService.cancelLockNotification(this);
         updateClock();
         registerClockReceiver();
@@ -130,12 +133,14 @@ public class LockActivity extends Activity {
 
     @Override
     protected void onPause() {
+        DiagnosticLog.record(this, "NudgeLockActivity", "onPause");
         unregisterClockReceiver();
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
+        DiagnosticLog.record(this, "NudgeLockActivity", "onDestroy");
         unregisterClockReceiver();
         super.onDestroy();
     }
@@ -1213,11 +1218,13 @@ public class LockActivity extends Activity {
     }
 
     private void continueSystemUnlock() {
+        DiagnosticLog.record(this, "NudgeLockActivity", "continue system unlock");
         KeyguardManager keyguardManager = (KeyguardManager) getSystemService(KEYGUARD_SERVICE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && keyguardManager != null && keyguardManager.isKeyguardLocked()) {
             keyguardManager.requestDismissKeyguard(this, new KeyguardManager.KeyguardDismissCallback() {
                 @Override
                 public void onDismissSucceeded() {
+                    DiagnosticLog.record(LockActivity.this, "NudgeLockActivity", "dismiss keyguard succeeded");
                     closeLockTask();
                 }
             });
@@ -1227,6 +1234,7 @@ public class LockActivity extends Activity {
     }
 
     private void closeLockTask() {
+        DiagnosticLog.record(this, "NudgeLockActivity", "close lock task");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask();
         } else {

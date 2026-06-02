@@ -41,4 +41,10 @@
     <string name="lock_channel_name">Nudge Screen 簾幕</string>
     <string name="lock_channel_description">用於在鎖定畫面上顯示待辦簾幕的通知。</string>
     <string name="beta_version_label">Beta 版 · %1$s</string>
+    <string name="diagnostics_button">Diagnostic log</string>
+    <string name="diagnostics_title">Diagnostic log</string>
+    <string name="diagnostics_send">Send</string>
+    <string name="diagnostics_clear">Clear</string>
+    <string name="diagnostics_empty">No diagnostic log entries yet.</string>
+    <string name="diagnostics_share_subject">Nudge Screen diagnostic log</string>
 </resources>

@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
         configureMainWindow();
         requestNotificationPermission();
         AppSettings.applyLockScreenRecovery(this);
+        DiagnosticLog.recordAppState(this, "main onCreate");
         syncLockMonitorService();
         registerBackHandler();
         setContentView(buildContent());
@@ -75,6 +76,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        DiagnosticLog.recordAppState(this, "main onResume");
         syncLockMonitorService();
         refreshTodos();
     }
@@ -123,8 +125,10 @@ public class MainActivity extends Activity {
 
     private void syncLockMonitorService() {
         if (AppSettings.lockScreenEnabled(this)) {
+            DiagnosticLog.record(this, "NudgeMain", "sync monitor: start");
             LockMonitorService.start(getApplicationContext());
         } else {
+            DiagnosticLog.record(this, "NudgeMain", "sync monitor: stop");
             LockMonitorService.stop(getApplicationContext());
         }
     }
@@ -238,6 +242,7 @@ public class MainActivity extends Activity {
         Switch enabledSwitch = new Switch(this);
         enabledSwitch.setChecked(AppSettings.lockScreenEnabled(this));
         enabledSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            DiagnosticLog.record(MainActivity.this, "NudgeMain", "lock screen toggle=" + isChecked);
             AppSettings.setLockScreenEnabled(MainActivity.this, isChecked);
             syncLockMonitorService();
             setContentView(buildContent());
@@ -396,6 +401,7 @@ public class MainActivity extends Activity {
                 0,
                 1
         ));
+        drawerPanel.addView(diagnosticsButton());
         drawerPanel.addView(betaVersionLabel());
 
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
@@ -764,6 +770,7 @@ public class MainActivity extends Activity {
     }
 
     private void openNotificationSettings() {
+        DiagnosticLog.recordAppState(this, "open notification settings");
         Intent intent;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && needsFullScreenIntentPermission()) {
             intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
@@ -779,6 +786,7 @@ public class MainActivity extends Activity {
     }
 
     private void openBatterySettings() {
+        DiagnosticLog.recordAppState(this, "open battery settings");
         Intent intent = batteryOptimizationIntent();
         try {
             startActivity(intent);
@@ -946,6 +954,96 @@ public class MainActivity extends Activity {
         label.setGravity(Gravity.CENTER);
         label.setPadding(0, dp(18), 0, dp(2));
         return label;
+    }
+
+    private View diagnosticsButton() {
+        TextView button = text(getString(R.string.diagnostics_button), 12, COLOR_MUTED, false);
+        button.setGravity(Gravity.CENTER);
+        button.setPadding(0, dp(10), 0, dp(4));
+        button.setOnClickListener(v -> showDiagnosticsDialog());
+        return button;
+    }
+
+    private void showDiagnosticsDialog() {
+        DiagnosticLog.recordAppState(this, "open diagnostics");
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(18), dp(18), dp(18), dp(14));
+        box.setBackground(rounded(COLOR_PANEL, 12));
+
+        TextView title = text(getString(R.string.diagnostics_title), 20, COLOR_INK, true);
+        box.addView(title);
+
+        TextView logView = text(diagnosticText(), 12, COLOR_INK, false);
+        logView.setTextIsSelectable(true);
+        logView.setPadding(dp(12), dp(10), dp(12), dp(10));
+        logView.setBackground(rounded(COLOR_FIELD, 8));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(logView, new ScrollView.LayoutParams(
+                ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.WRAP_CONTENT
+        ));
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(340)
+        );
+        scrollParams.topMargin = dp(12);
+        box.addView(scroll, scrollParams);
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setPadding(0, dp(12), 0, 0);
+
+        Button clear = quietButton(getString(R.string.diagnostics_clear), COLOR_DANGER);
+        clear.setOnClickListener(v -> {
+            DiagnosticLog.clear(this);
+            logView.setText(diagnosticText());
+        });
+        buttons.addView(clear, new LinearLayout.LayoutParams(dp(82), dp(44)));
+
+        Button send = filledButton(getString(R.string.diagnostics_send));
+        send.setOnClickListener(v -> shareDiagnostics());
+        LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(96), dp(44));
+        sendParams.leftMargin = dp(8);
+        buttons.addView(send, sendParams);
+
+        Button close = quietButton(getString(R.string.close), COLOR_MUTED);
+        close.setOnClickListener(v -> dialog.dismiss());
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(dp(78), dp(44));
+        closeParams.leftMargin = dp(8);
+        buttons.addView(close, closeParams);
+
+        box.addView(buttons);
+        dialog.setContentView(box);
+        dialog.show();
+
+        Window dialogWindow = dialog.getWindow();
+        if (dialogWindow != null) {
+            dialogWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
+            dialogWindow.setLayout(
+                    Math.min(getResources().getDisplayMetrics().widthPixels - dp(28), dp(560)),
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private String diagnosticText() {
+        String value = DiagnosticLog.shareText(this);
+        return value.trim().length() == 0 ? getString(R.string.diagnostics_empty) : value;
+    }
+
+    private void shareDiagnostics() {
+        DiagnosticLog.recordAppState(this, "share diagnostics");
+        Intent intent = new Intent(Intent.ACTION_SEND)
+                .setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, getString(R.string.diagnostics_share_subject))
+                .putExtra(Intent.EXTRA_TEXT, DiagnosticLog.shareText(this));
+        startActivity(Intent.createChooser(intent, getString(R.string.diagnostics_send)));
     }
 
     private String appVersionName() {

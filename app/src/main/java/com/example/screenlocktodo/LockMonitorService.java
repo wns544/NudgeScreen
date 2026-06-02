@@ -19,7 +19,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
-import android.util.Log;
 import android.view.Display;
 import android.hardware.display.DisplayManager;
 
@@ -69,18 +68,18 @@ public class LockMonitorService extends Service {
             }
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-                Log.i(TAG, "screen off");
+                DiagnosticLog.record(context, TAG, "screen off");
                 waitingForScreenOffUnlock = true;
                 lastScreenOffAt = SystemClock.elapsedRealtime();
                 cancelLockNotification(context);
                 TodoStore.warm(context);
                 preArmLockScreen(context);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
-                Log.i(TAG, "screen on");
+                DiagnosticLog.record(context, TAG, "screen on");
                 showLockScreen(context, true, true, true);
                 scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
             } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
-                Log.i(TAG, "user present recentScreenOff=" + wasRecentlyScreenOff());
+                DiagnosticLog.record(context, TAG, "user present recentScreenOff=" + wasRecentlyScreenOff());
                 if (wasRecentlyScreenOff()) {
                     waitingForScreenOffUnlock = false;
                     showLockScreen(context, false, true, true);
@@ -94,7 +93,7 @@ public class LockMonitorService extends Service {
 
     public static void start(Context context) {
         if (!AppSettings.lockScreenEnabled(context)) {
-            Log.i(TAG, "start skipped because lock screen is disabled");
+            DiagnosticLog.record(context, TAG, "start skipped because lock screen is disabled");
             stop(context);
             return;
         }
@@ -106,14 +105,15 @@ public class LockMonitorService extends Service {
             } else {
                 context.startService(intent);
             }
-            Log.i(TAG, "monitor service start requested");
-        } catch (RuntimeException ignored) {
-            Log.w(TAG, "monitor service start failed; scheduling restart", ignored);
+            DiagnosticLog.record(context, TAG, "monitor service start requested");
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(context, TAG, "monitor service start failed; scheduling restart", e);
             scheduleRestart(context, QUICK_RESTART_DELAY_MS);
         }
     }
 
     public static void stop(Context context) {
+        DiagnosticLog.record(context, TAG, "monitor service stop requested");
         cancelScheduledRestarts(context);
         cancelLockNotification(context);
         cancelServiceNotification(context);
@@ -122,11 +122,13 @@ public class LockMonitorService extends Service {
 
     static void scheduleRestart(Context context, long delayMillis) {
         if (!AppSettings.lockScreenEnabled(context)) {
+            DiagnosticLog.record(context, TAG, "schedule restart skipped; disabled delay=" + delayMillis);
             return;
         }
 
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(ALARM_SERVICE);
         if (alarmManager == null) {
+            DiagnosticLog.record(context, TAG, "schedule restart skipped; alarm manager unavailable delay=" + delayMillis);
             return;
         }
 
@@ -154,15 +156,18 @@ public class LockMonitorService extends Service {
                     restartPendingIntent
             );
         }
+        DiagnosticLog.record(context, TAG, "restart scheduled delayMs=" + delayMillis);
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
         if (!AppSettings.lockScreenEnabled(this)) {
+            DiagnosticLog.record(this, TAG, "onCreate stopSelf; disabled");
             stopSelf();
             return;
         }
+        DiagnosticLog.recordAppState(this, "service onCreate");
         createNotificationChannels();
         registerScreenReceiver();
         registerDisplayListener();
@@ -174,11 +179,13 @@ public class LockMonitorService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!AppSettings.lockScreenEnabled(this)) {
+            DiagnosticLog.record(this, TAG, "onStartCommand stopSelf; disabled");
             cancelLockNotification(this);
             cancelServiceNotification(this);
             stopSelf();
             return START_NOT_STICKY;
         }
+        DiagnosticLog.recordAppState(this, "service onStartCommand startId=" + startId);
         createNotificationChannels();
         registerScreenReceiver();
         registerDisplayListener();
@@ -190,6 +197,7 @@ public class LockMonitorService extends Service {
 
     @Override
     public void onDestroy() {
+        DiagnosticLog.record(this, TAG, "service onDestroy");
         if (registered) {
             unregisterReceiver(screenReceiver);
             registered = false;
@@ -208,6 +216,7 @@ public class LockMonitorService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
+        DiagnosticLog.record(this, TAG, "service onTaskRemoved");
         if (AppSettings.lockScreenEnabled(this)) {
             scheduleRestart(700);
             scheduleRestart(QUICK_RESTART_DELAY_MS);
@@ -259,14 +268,14 @@ public class LockMonitorService extends Service {
 
         int state = display.getState();
         if (state == Display.STATE_OFF || state == Display.STATE_DOZE || state == Display.STATE_DOZE_SUSPEND) {
-            Log.i(TAG, "display resting state=" + state);
+            DiagnosticLog.record(this, TAG, "display resting state=" + state);
             waitingForScreenOffUnlock = true;
             lastScreenOffAt = SystemClock.elapsedRealtime();
             cancelLockNotification(this);
             TodoStore.warm(this);
             preArmLockScreen(this);
         } else if (state == Display.STATE_ON && wasRecentlyScreenOff()) {
-            Log.i(TAG, "display on after resting state");
+            DiagnosticLog.record(this, TAG, "display on after resting state");
             waitingForScreenOffUnlock = false;
             showLockScreen(this, false, true, true);
             scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
@@ -309,9 +318,11 @@ public class LockMonitorService extends Service {
     private void preArmLockScreen(Context context) {
         long now = SystemClock.elapsedRealtime();
         if (now - lastPreArmAt < PRE_ARM_COOLDOWN_MS) {
+            DiagnosticLog.record(context, TAG, "pre-arm skipped by cooldown");
             return;
         }
         lastPreArmAt = now;
+        DiagnosticLog.record(context, TAG, "pre-arm lock screen");
         showLockScreen(context, false, true, false);
     }
 
@@ -380,13 +391,20 @@ public class LockMonitorService extends Service {
 
     private void showLockScreen(Context context, boolean wakeDisplay, boolean allowBeforeKeyguard, boolean allowNotificationFallback) {
         if (!AppSettings.lockScreenEnabled(context)) {
+            DiagnosticLog.record(context, TAG, "show lock skipped; disabled");
             LockMonitorService.stop(context);
             return;
         }
 
         if (!allowBeforeKeyguard && !isKeyguardLocked(context)) {
+            DiagnosticLog.record(context, TAG, "show lock skipped; keyguard not locked");
             return;
         }
+
+        DiagnosticLog.recordAppState(context, "show lock wake=" + wakeDisplay
+                + " beforeKeyguard=" + allowBeforeKeyguard
+                + " fallback=" + allowNotificationFallback
+                + " keyguardLocked=" + isKeyguardLocked(context));
 
         Intent lockIntent = new Intent(context, LockActivity.class)
                 .putExtra(LockActivity.EXTRA_TURN_SCREEN_ON, wakeDisplay)
@@ -407,11 +425,13 @@ public class LockMonitorService extends Service {
         launchLockActivity(context, lockIntent);
 
         if (!allowNotificationFallback) {
+            DiagnosticLog.record(context, TAG, "notification fallback skipped");
             return;
         }
 
         long now = SystemClock.elapsedRealtime();
         if (now - lastLockNotificationAt < LOCK_NOTIFICATION_COOLDOWN_MS) {
+            DiagnosticLog.record(context, TAG, "notification fallback skipped by cooldown");
             return;
         }
         lastLockNotificationAt = now;
@@ -440,6 +460,7 @@ public class LockMonitorService extends Service {
 
         NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
+            DiagnosticLog.record(context, TAG, "posting full-screen notification fallback");
             manager.notify(LOCK_NOTIFICATION_ID, notification);
         }
     }
@@ -456,20 +477,20 @@ public class LockMonitorService extends Service {
                 );
                 ActivityOptions options = pendingIntentSenderOptions();
                 pendingIntent.send(context, 0, null, null, null, null, options.toBundle());
-                Log.i(TAG, "sent lock activity pending intent with BAL allowed");
+                DiagnosticLog.record(context, TAG, "sent lock activity pending intent with BAL allowed");
                 cancelLockNotification(context);
                 return;
             } catch (PendingIntent.CanceledException | RuntimeException e) {
-                Log.w(TAG, "pending intent lock launch failed", e);
+                DiagnosticLog.record(context, TAG, "pending intent lock launch failed", e);
             }
         }
 
         try {
             context.startActivity(lockIntent);
-            Log.i(TAG, "started lock activity directly");
+            DiagnosticLog.record(context, TAG, "started lock activity directly");
             cancelLockNotification(context);
         } catch (RuntimeException e) {
-            Log.w(TAG, "direct lock launch failed", e);
+            DiagnosticLog.record(context, TAG, "direct lock launch failed", e);
         }
     }
 
