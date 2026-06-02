@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -403,7 +404,8 @@ public class LockMonitorService extends Service {
                 context,
                 1,
                 lockIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE,
+                pendingIntentCreatorOptions()
         );
 
         Notification notification = new Notification.Builder(context, LOCK_CHANNEL_ID)
@@ -433,18 +435,10 @@ public class LockMonitorService extends Service {
                         context,
                         2,
                         lockIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE,
+                        pendingIntentCreatorOptions()
                 );
-                ActivityOptions options = ActivityOptions.makeBasic();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                    options.setPendingIntentBackgroundActivityStartMode(
-                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
-                    );
-                } else {
-                    options.setPendingIntentBackgroundActivityStartMode(
-                            ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
-                    );
-                }
+                ActivityOptions options = pendingIntentSenderOptions();
                 pendingIntent.send(context, 0, null, null, null, null, options.toBundle());
                 Log.i(TAG, "sent lock activity pending intent with BAL allowed");
                 cancelLockNotification(context);
@@ -461,6 +455,36 @@ public class LockMonitorService extends Service {
         } catch (RuntimeException e) {
             Log.w(TAG, "direct lock launch failed", e);
         }
+    }
+
+    private Bundle pendingIntentCreatorOptions() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return null;
+        }
+
+        ActivityOptions options = ActivityOptions.makeBasic();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            options.setPendingIntentCreatorBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
+            );
+        } else {
+            options.setPendingIntentBackgroundActivityLaunchAllowed(true);
+        }
+        return options.toBundle();
+    }
+
+    private ActivityOptions pendingIntentSenderOptions() {
+        ActivityOptions options = ActivityOptions.makeBasic();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            options.setPendingIntentBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_ALWAYS
+            );
+        } else {
+            options.setPendingIntentBackgroundActivityStartMode(
+                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+            );
+        }
+        return options;
     }
 
     private void createNotificationChannels() {
