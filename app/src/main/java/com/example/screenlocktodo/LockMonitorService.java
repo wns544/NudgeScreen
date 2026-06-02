@@ -35,6 +35,9 @@ public class LockMonitorService extends Service {
     private static final long UNLOCK_FROM_SCREEN_OFF_WINDOW_MS = 8000L;
     private static final long LOCK_VISIBILITY_CHECK_DELAY_MS = 1800L;
     private static final long RECENT_VISIBLE_SKIP_MS = 1500L;
+    private static final int LOCK_NOTIFICATION_UNAVAILABLE = 0;
+    private static final int LOCK_NOTIFICATION_POSTED = 1;
+    private static final int LOCK_NOTIFICATION_COOLDOWN = 2;
     private static final long[] SCREEN_ON_RETRY_DELAYS_MS = {250L, 900L};
     private static final long[] USER_PRESENT_RETRY_DELAYS_MS = {250L, 1000L};
     private static final long PRE_ARM_COOLDOWN_MS = 2500L;
@@ -453,7 +456,8 @@ public class LockMonitorService extends Service {
         }
 
         if (allowNotificationFallback && canUseFullScreenIntent(context)) {
-            if (postFullScreenLockNotification(context, lockIntent, attemptId, "primary")) {
+            int notificationResult = postFullScreenLockNotification(context, lockIntent, attemptId, "primary");
+            if (notificationResult == LOCK_NOTIFICATION_POSTED || notificationResult == LOCK_NOTIFICATION_COOLDOWN) {
                 scheduleLockVisibilityCheck(context.getApplicationContext(), attemptId, source, attemptAt);
                 return;
             }
@@ -477,12 +481,12 @@ public class LockMonitorService extends Service {
         postFullScreenLockNotification(context, lockIntent, attemptId, "fallback");
     }
 
-    private boolean postFullScreenLockNotification(Context context, Intent lockIntent, long attemptId, String mode) {
+    private int postFullScreenLockNotification(Context context, Intent lockIntent, long attemptId, String mode) {
         long now = SystemClock.elapsedRealtime();
         if (now - lastLockNotificationAt < LOCK_NOTIFICATION_COOLDOWN_MS) {
             DiagnosticLog.record(context, TAG, "full-screen notification skipped id=" + attemptId
                     + " mode=" + mode + " by cooldown");
-            return false;
+            return LOCK_NOTIFICATION_COOLDOWN;
         }
         lastLockNotificationAt = now;
 
@@ -512,11 +516,11 @@ public class LockMonitorService extends Service {
         if (manager != null) {
             DiagnosticLog.record(context, TAG, "posting full-screen notification id=" + attemptId + " mode=" + mode);
             manager.notify(LOCK_NOTIFICATION_ID, notification);
-            return true;
+            return LOCK_NOTIFICATION_POSTED;
         }
         DiagnosticLog.record(context, TAG, "full-screen notification skipped id=" + attemptId
                 + " mode=" + mode + "; notification manager unavailable");
-        return false;
+        return LOCK_NOTIFICATION_UNAVAILABLE;
     }
 
     private void scheduleLockVisibilityCheck(Context context, long attemptId, String source, long attemptAt) {
