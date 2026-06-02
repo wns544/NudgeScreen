@@ -40,4 +40,5 @@
     <string name="service_channel_description">화면 켜짐을 감지하기 위한 조용한 상태 알림입니다.</string>
     <string name="lock_channel_name">잠깐, 할 일 커튼</string>
     <string name="lock_channel_description">잠금화면 위에 할 일 커튼을 띄우기 위한 알림입니다.</string>
+    <string name="beta_version_label">베타버전 · %1$s</string>
 </resources>

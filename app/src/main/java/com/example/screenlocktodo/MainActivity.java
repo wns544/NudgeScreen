@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Paint;
 import android.graphics.Typeface;
@@ -389,6 +390,12 @@ public class MainActivity extends Activity {
             showBatteryGuideDialog(false);
         }, false));
         drawerPanel.addView(actionRow(getString(R.string.close), v -> closeDrawer(), false));
+        drawerPanel.addView(new View(this), new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1
+        ));
+        drawerPanel.addView(betaVersionLabel());
 
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
                 panelWidth,
@@ -931,6 +938,22 @@ public class MainActivity extends Activity {
         TextView title = text(label, 14, COLOR_MUTED, true);
         title.setPadding(0, dp(20), 0, dp(4));
         return title;
+    }
+
+    private View betaVersionLabel() {
+        TextView label = text(getString(R.string.beta_version_label, appVersionName()), 13, COLOR_MUTED, false);
+        label.setGravity(Gravity.CENTER);
+        label.setPadding(0, dp(18), 0, dp(2));
+        return label;
+    }
+
+    private String appVersionName() {
+        try {
+            PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
+            return info.versionName == null ? "" : info.versionName;
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return "";
+        }
     }
 
     private TextView chip(String value, int bgColor, int textColor) {

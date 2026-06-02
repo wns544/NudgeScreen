@@ -40,4 +40,5 @@
     <string name="service_channel_description">Quiet status notification for detecting screen wake events.</string>
     <string name="lock_channel_name">Nudge Screen curtain</string>
     <string name="lock_channel_description">Notification for showing the todo curtain over the lock screen.</string>
+    <string name="beta_version_label">Beta · %1$s</string>
 </resources>

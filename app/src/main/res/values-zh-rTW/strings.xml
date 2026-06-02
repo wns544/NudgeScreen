@@ -40,4 +40,5 @@
     <string name="service_channel_description">用於偵測螢幕喚醒事件的安靜狀態通知。</string>
     <string name="lock_channel_name">Nudge Screen 簾幕</string>
     <string name="lock_channel_description">用於在鎖定畫面上顯示待辦簾幕的通知。</string>
+    <string name="beta_version_label">Beta 版 · %1$s</string>
 </resources>
