@@ -94,6 +94,7 @@ public class LockMonitorService extends Service {
 
     public static void start(Context context) {
         if (!AppSettings.lockScreenEnabled(context)) {
+            Log.i(TAG, "start skipped because lock screen is disabled");
             stop(context);
             return;
         }
@@ -105,7 +106,9 @@ public class LockMonitorService extends Service {
             } else {
                 context.startService(intent);
             }
+            Log.i(TAG, "monitor service start requested");
         } catch (RuntimeException ignored) {
+            Log.w(TAG, "monitor service start failed; scheduling restart", ignored);
             scheduleRestart(context, QUICK_RESTART_DELAY_MS);
         }
     }

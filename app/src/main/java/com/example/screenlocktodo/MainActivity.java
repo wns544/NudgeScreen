@@ -64,6 +64,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         configureMainWindow();
         requestNotificationPermission();
+        AppSettings.applyLockScreenRecovery(this);
         syncLockMonitorService();
         registerBackHandler();
         setContentView(buildContent());

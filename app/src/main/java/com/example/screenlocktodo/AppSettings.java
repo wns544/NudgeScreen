@@ -2,11 +2,14 @@ package com.example.screenlocktodo;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 
 final class AppSettings {
     private static final String PREFS = "todo_lock_settings";
     private static final String KEY_LOCK_SCREEN_ENABLED = "lock_screen_enabled";
+    private static final String KEY_LOCK_RECOVERY_VERSION = "lock_screen_recovery_version";
     private static final String KEY_OVERLAY_OPACITY = "overlay_opacity";
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
     private static final String KEY_BATTERY_GUIDE_SHOWN = "battery_guide_shown";
@@ -21,6 +24,21 @@ final class AppSettings {
 
     static void setLockScreenEnabled(Context context, boolean value) {
         prefs(context).edit().putBoolean(KEY_LOCK_SCREEN_ENABLED, value).apply();
+    }
+
+    static void applyLockScreenRecovery(Context context) {
+        SharedPreferences prefs = prefs(context);
+        int currentVersion = currentVersionCode(context);
+        if (prefs.getInt(KEY_LOCK_RECOVERY_VERSION, 0) >= currentVersion) {
+            return;
+        }
+
+        SharedPreferences.Editor editor = prefs.edit()
+                .putInt(KEY_LOCK_RECOVERY_VERSION, currentVersion);
+        if (!prefs.getBoolean(KEY_LOCK_SCREEN_ENABLED, true)) {
+            editor.putBoolean(KEY_LOCK_SCREEN_ENABLED, true);
+        }
+        editor.apply();
     }
 
     static int overlayOpacity(Context context) {
@@ -54,5 +72,17 @@ final class AppSettings {
             storageContext = context.createDeviceProtectedStorageContext();
         }
         return storageContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    private static int currentVersionCode(Context context) {
+        try {
+            PackageInfo info = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                return (int) Math.min(Integer.MAX_VALUE, info.getLongVersionCode());
+            }
+            return info.versionCode;
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return 0;
+        }
     }
 }
