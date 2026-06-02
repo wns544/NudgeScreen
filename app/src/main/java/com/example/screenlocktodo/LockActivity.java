@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -1163,6 +1164,7 @@ public class LockActivity extends Activity {
     private final class LockToggleView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF rect = new RectF();
+        private final Path shacklePath = new Path();
         private boolean locked;
 
         LockToggleView(Context context) {
@@ -1173,7 +1175,7 @@ public class LockActivity extends Activity {
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setStrokeWidth(dp(1.7f));
+            paint.setStrokeWidth(dp(2.2f));
         }
 
         void setLocked(boolean locked) {
@@ -1186,42 +1188,52 @@ public class LockActivity extends Activity {
             super.onDraw(canvas);
             float cx = getWidth() * 0.5f;
             float cy = getHeight() * 0.5f;
-            float bodyWidth = dp(14);
-            float bodyHeight = dp(13);
+            float bodyWidth = dp(21);
+            float bodyHeight = dp(16);
             float left = cx - bodyWidth * 0.5f;
-            float top = cy + dp(2);
+            float top = cy + dp(1);
             float right = cx + bodyWidth * 0.5f;
             float bottom = top + bodyHeight;
-            rect.set(left, top, right, bottom);
-            canvas.drawRoundRect(rect, dp(3), dp(3), paint);
 
-            float shackleTop = top - dp(14);
-            float shackleBottom = top + dp(1);
-            float shackleLeft = cx - dp(6);
-            float shackleRight = cx + dp(6);
-            if (locked) {
-                rect.set(shackleLeft, shackleTop, shackleRight, shackleBottom);
-                canvas.drawArc(rect, 205, 130, false, paint);
-                canvas.drawLine(shackleLeft + dp(1), top - dp(5), shackleLeft + dp(1), top - dp(1), paint);
-                canvas.drawLine(shackleRight - dp(1), top - dp(5), shackleRight - dp(1), top - dp(1), paint);
-            } else {
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2.2f));
+            paint.setColor(0xDFFFFFFF);
+            rect.set(left, top, right, bottom);
+            canvas.drawRoundRect(rect, dp(3.5f), dp(3.5f), paint);
+
+            float shackleLeft = cx - dp(7);
+            float shackleRight = cx + dp(7);
+            float shackleTop = top - dp(16);
+            float shackleShoulderY = top + dp(1);
+            shacklePath.reset();
+            shacklePath.moveTo(shackleLeft, shackleShoulderY);
+            shacklePath.lineTo(shackleLeft, shackleTop + dp(8));
+            rect.set(shackleLeft, shackleTop, shackleRight, shackleTop + dp(18));
+            shacklePath.arcTo(rect, 180, 180, false);
+            shacklePath.lineTo(shackleRight, shackleShoulderY);
+
+            if (!locked) {
                 canvas.save();
-                canvas.rotate(-24f, cx + dp(4), top - dp(8));
-                float openLeft = cx - dp(1);
-                float openRight = cx + dp(11);
-                float openTop = top - dp(15);
-                float openBottom = top;
-                rect.set(openLeft, openTop, openRight, openBottom);
-                canvas.drawArc(rect, 206, 126, false, paint);
-                canvas.drawLine(openLeft + dp(1), top - dp(6), openLeft + dp(1), top - dp(1), paint);
+                canvas.rotate(-24f, cx + dp(6), top - dp(8));
+                canvas.translate(dp(8), -dp(1));
+                canvas.drawPath(shacklePath, paint);
                 canvas.restore();
+            } else {
+                canvas.drawPath(shacklePath, paint);
             }
+
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(locked ? 0xEFFFFFFF : 0xBFFFFFFF);
+            canvas.drawCircle(cx, top + dp(7), dp(3.1f), paint);
+            rect.set(cx - dp(1.2f), top + dp(8), cx + dp(1.2f), top + dp(13));
+            canvas.drawRoundRect(rect, dp(1.2f), dp(1.2f), paint);
         }
     }
 
     private final class UndoButtonView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF arcBounds = new RectF();
+        private final Path arrowHead = new Path();
         private boolean active;
 
         UndoButtonView(Context context) {
@@ -1246,15 +1258,22 @@ public class LockActivity extends Activity {
             paint.setColor(active ? 0xDFFFFFFF : 0x55FFFFFF);
 
             float cx = getWidth() * 0.5f;
-            float cy = getHeight() * 0.5f + dp(1);
-            float radius = dp(8.5f);
+            float cy = getHeight() * 0.5f;
+            float radius = dp(9.5f);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2.2f));
             arcBounds.set(cx - radius, cy - radius, cx + radius, cy + radius);
-            canvas.drawArc(arcBounds, 205, 250, false, paint);
+            canvas.drawArc(arcBounds, 125, 285, false, paint);
 
-            float arrowX = cx - dp(8);
-            float arrowY = cy - dp(6);
-            canvas.drawLine(arrowX, arrowY, arrowX - dp(5), arrowY, paint);
-            canvas.drawLine(arrowX, arrowY, arrowX, arrowY - dp(5), paint);
+            float arrowX = cx - dp(8.2f);
+            float arrowY = cy - dp(5.2f);
+            arrowHead.reset();
+            arrowHead.moveTo(arrowX, arrowY);
+            arrowHead.lineTo(arrowX + dp(7), arrowY - dp(1.3f));
+            arrowHead.lineTo(arrowX + dp(2.3f), arrowY + dp(5.8f));
+            arrowHead.close();
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawPath(arrowHead, paint);
         }
     }
 

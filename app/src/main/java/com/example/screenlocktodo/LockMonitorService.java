@@ -416,7 +416,8 @@ public class LockMonitorService extends Service {
             return;
         }
 
-        if (!allowBeforeKeyguard && !isKeyguardLocked(context)) {
+        boolean keyguardLocked = isKeyguardLocked(context);
+        if (!allowBeforeKeyguard && !keyguardLocked) {
             DiagnosticLog.record(context, TAG, "show lock skipped id=" + attemptId + " source=" + source + "; keyguard not locked "
                     + displayStateSummary(context));
             return;
@@ -461,7 +462,7 @@ public class LockMonitorService extends Service {
             wakeLock.acquire(3000);
         }
 
-        if (allowNotificationFallback && canUseFullScreenIntent(context)) {
+        if (keyguardLocked && allowNotificationFallback && canUseFullScreenIntent(context)) {
             int notificationResult = postFullScreenLockNotification(context, lockIntent, attemptId, "primary");
             if (notificationResult == LOCK_NOTIFICATION_POSTED || notificationResult == LOCK_NOTIFICATION_COOLDOWN) {
                 scheduleLockVisibilityCheck(context.getApplicationContext(), attemptId, source, attemptAt);
