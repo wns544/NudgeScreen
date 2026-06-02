@@ -41,6 +41,7 @@ import java.util.List;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_NOTIFICATIONS = 40;
+    private static final int REQUEST_LOCK_BACKGROUND_IMAGE = 41;
 
     private static final int COLOR_BG = 0xFFF5F5F7;
     private static final int COLOR_INK = 0xFF1D1D1F;
@@ -105,6 +106,14 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         handleBack();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_LOCK_BACKGROUND_IMAGE && resultCode == RESULT_OK && data != null) {
+            saveLockBackgroundImage(data);
+        }
     }
 
     private void registerBackHandler() {
@@ -398,6 +407,15 @@ public class MainActivity extends Activity {
         drawerPanel.addView(actionRow(getString(R.string.notification_permission), v -> {
             closeDrawer();
             openNotificationSettings();
+        }, false));
+        drawerPanel.addView(actionRow(getString(R.string.choose_lock_background), v -> {
+            closeDrawer();
+            openLockBackgroundPicker();
+        }, false));
+        drawerPanel.addView(actionRow(getString(R.string.remove_lock_background), v -> {
+            clearLockBackgroundImage();
+            setContentView(buildContent());
+            refreshTodos();
         }, false));
         drawerPanel.addView(actionRow(getString(R.string.language_setting) + " · " + currentLanguageName(), v -> showLanguageDialog(), false));
         drawerPanel.addView(actionRow(getString(R.string.full_screen_alert_action), v -> showFullScreenIntentGuide(), false));
@@ -777,6 +795,62 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATIONS);
+        }
+    }
+
+    private void openLockBackgroundPicker() {
+        DiagnosticLog.recordAppState(this, "open lock background picker");
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("image/*")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try {
+            startActivityForResult(intent, REQUEST_LOCK_BACKGROUND_IMAGE);
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeMain", "lock background picker failed", e);
+        }
+    }
+
+    private void saveLockBackgroundImage(Intent data) {
+        Uri uri = data.getData();
+        if (uri == null) {
+            DiagnosticLog.record(this, "NudgeMain", "lock background picker returned no uri");
+            return;
+        }
+
+        String previousUri = AppSettings.lockBackgroundImageUri(this);
+        int flags = data.getFlags()
+                & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        try {
+            getContentResolver().takePersistableUriPermission(uri, flags & Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeMain", "lock background persist permission failed uri=" + uri, e);
+        }
+
+        if (previousUri != null && previousUri.length() > 0 && !previousUri.equals(uri.toString())) {
+            releasePersistedLockBackgroundUri(previousUri);
+        }
+        AppSettings.setLockBackgroundImageUri(this, uri.toString());
+        DiagnosticLog.record(this, "NudgeMain", "lock background image selected uri=" + uri);
+    }
+
+    private void clearLockBackgroundImage() {
+        DiagnosticLog.record(this, "NudgeMain", "lock background image cleared");
+        releasePersistedLockBackgroundUri(AppSettings.lockBackgroundImageUri(this));
+        AppSettings.clearLockBackgroundImageUri(this);
+    }
+
+    private void releasePersistedLockBackgroundUri(String savedUri) {
+        if (savedUri == null || savedUri.length() == 0) {
+            return;
+        }
+        try {
+            getContentResolver().releasePersistableUriPermission(
+                    Uri.parse(savedUri),
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+        } catch (RuntimeException ignored) {
         }
     }
 

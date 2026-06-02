@@ -16,6 +16,8 @@
     <string name="settings">Settings</string>
     <string name="preview">Preview</string>
     <string name="notification_permission">Notification permission</string>
+    <string name="choose_lock_background">Choose lock screen background</string>
+    <string name="remove_lock_background">Remove background photo</string>
     <string name="full_screen_alert_action">Allow full-screen alerts</string>
     <string name="full_screen_alert_title">Allow full-screen alerts</string>
     <string name="full_screen_alert_body">Nudge Screen needs full-screen alerts to show the todo curtain over the lock screen.\n\nOpen Settings → Apps → Special access → Full-screen alerts → Nudge Screen, then turn Allow on.</string>

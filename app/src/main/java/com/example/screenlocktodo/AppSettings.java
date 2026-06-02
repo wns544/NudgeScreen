@@ -14,6 +14,7 @@ final class AppSettings {
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
     private static final String KEY_BATTERY_GUIDE_SHOWN = "battery_guide_shown";
     private static final String KEY_LANGUAGE_TAG = "language_tag";
+    private static final String KEY_LOCK_BACKGROUND_IMAGE_URI = "lock_background_image_uri";
     private static final int DEFAULT_OVERLAY_OPACITY = 40;
 
     private AppSettings() {
@@ -73,6 +74,18 @@ final class AppSettings {
 
     static void setLanguageTag(Context context, String value) {
         prefs(context).edit().putString(KEY_LANGUAGE_TAG, value == null ? "" : value).apply();
+    }
+
+    static String lockBackgroundImageUri(Context context) {
+        return prefs(context).getString(KEY_LOCK_BACKGROUND_IMAGE_URI, "");
+    }
+
+    static void setLockBackgroundImageUri(Context context, String value) {
+        prefs(context).edit().putString(KEY_LOCK_BACKGROUND_IMAGE_URI, value == null ? "" : value).apply();
+    }
+
+    static void clearLockBackgroundImageUri(Context context) {
+        prefs(context).edit().remove(KEY_LOCK_BACKGROUND_IMAGE_URI).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

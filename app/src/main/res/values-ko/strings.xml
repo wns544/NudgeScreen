@@ -16,6 +16,8 @@
     <string name="settings">설정</string>
     <string name="preview">미리보기</string>
     <string name="notification_permission">알림 권한</string>
+    <string name="choose_lock_background">잠금화면 배경 사진 선택</string>
+    <string name="remove_lock_background">배경 사진 제거</string>
     <string name="full_screen_alert_action">전체 화면 알림 허용</string>
     <string name="full_screen_alert_title">전체 화면 알림을 켜주세요</string>
     <string name="full_screen_alert_body">잠금화면 위에 할 일 커튼을 띄우려면 전체 화면 알림 권한이 필요합니다.\n\n설정 → 애플리케이션 → 특별한 접근 → 전체 화면 알림 → 잠깐, 할 일 → 허용을 켜주세요.</string>

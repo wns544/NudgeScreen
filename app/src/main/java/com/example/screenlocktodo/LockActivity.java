@@ -20,6 +20,7 @@ import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -36,10 +37,13 @@ import android.view.inputmethod.InputMethodManager;
 import android.window.OnBackInvokedDispatcher;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -67,7 +71,7 @@ public class LockActivity extends Activity {
     private TextView menuButton;
     private LinearLayout menuPanel;
     private LockToggleView lockButton;
-    private View wallpaperBackground;
+    private ImageView wallpaperBackground;
     private View curtainBackground;
     private FrameLayout curtainContent;
     private TodoItem lastDeletedItem;
@@ -87,6 +91,7 @@ public class LockActivity extends Activity {
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
     private int lastWallpaperId = Integer.MIN_VALUE;
+    private String lastBackgroundKey = "";
     private ValueAnimator inputBlockHeightAnimator;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final BroadcastReceiver clockReceiver = new BroadcastReceiver() {
@@ -240,15 +245,65 @@ public class LockActivity extends Activity {
             return;
         }
 
-        WallpaperManager wallpaperManager = WallpaperManager.getInstance(this);
-        int wallpaperId = currentWallpaperId(wallpaperManager);
-        if (!force && wallpaperId == lastWallpaperId && wallpaperBackground.getBackground() != null) {
+        String imageUri = AppSettings.lockBackgroundImageUri(this);
+        if (imageUri != null && imageUri.length() > 0 && applySelectedWallpaperImage(imageUri, force)) {
             return;
         }
 
+        WallpaperManager wallpaperManager = WallpaperManager.getInstance(this);
+        int wallpaperId = currentWallpaperId(wallpaperManager);
+        String backgroundKey = "colors:" + wallpaperId;
+        if (!force && backgroundKey.equals(lastBackgroundKey) && wallpaperBackground.getBackground() != null) {
+            return;
+        }
+
+        wallpaperBackground.setImageDrawable(null);
         wallpaperBackground.setBackground(wallpaperGradient(wallpaperManager));
         lastWallpaperId = wallpaperId;
+        lastBackgroundKey = backgroundKey;
         DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper color background updated id=" + wallpaperId);
+    }
+
+    private boolean applySelectedWallpaperImage(String imageUri, boolean force) {
+        String backgroundKey = "image:" + imageUri;
+        if (!force && backgroundKey.equals(lastBackgroundKey) && wallpaperBackground.getDrawable() != null) {
+            return true;
+        }
+
+        Uri uri;
+        try {
+            uri = Uri.parse(imageUri);
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "selected background uri parse failed uri=" + imageUri, e);
+            return false;
+        }
+
+        try (InputStream ignored = getContentResolver().openInputStream(uri)) {
+            if (ignored == null) {
+                DiagnosticLog.record(this, "NudgeLockActivity", "selected background open returned null uri=" + uri);
+                return false;
+            }
+        } catch (IOException | RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "selected background open failed uri=" + uri, e);
+            return false;
+        }
+
+        try {
+            wallpaperBackground.setBackgroundColor(0xFF303030);
+            wallpaperBackground.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            wallpaperBackground.setImageURI(uri);
+            if (wallpaperBackground.getDrawable() == null) {
+                DiagnosticLog.record(this, "NudgeLockActivity", "selected background decode failed uri=" + uri);
+                return false;
+            }
+            lastBackgroundKey = backgroundKey;
+            DiagnosticLog.record(this, "NudgeLockActivity", "selected background image applied uri=" + uri);
+            return true;
+        } catch (RuntimeException e) {
+            wallpaperBackground.setImageDrawable(null);
+            DiagnosticLog.record(this, "NudgeLockActivity", "selected background apply failed uri=" + uri, e);
+            return false;
+        }
     }
 
     private int currentWallpaperId(WallpaperManager wallpaperManager) {
@@ -310,8 +365,9 @@ public class LockActivity extends Activity {
     private View buildContent() {
         FrameLayout shell = new CurtainFrameLayout(this);
 
-        wallpaperBackground = new View(this);
+        wallpaperBackground = new ImageView(this);
         wallpaperBackground.setBackgroundColor(0xFF303030);
+        wallpaperBackground.setScaleType(ImageView.ScaleType.CENTER_CROP);
         shell.addView(wallpaperBackground, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
