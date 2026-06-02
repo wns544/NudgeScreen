@@ -1221,8 +1221,7 @@ public class LockActivity extends Activity {
 
     private final class UndoButtonView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF arcBounds = new RectF();
-        private final Path arrowHead = new Path();
+        private final Path arrowPath = new Path();
         private boolean active;
 
         UndoButtonView(Context context) {
@@ -1232,7 +1231,7 @@ public class LockActivity extends Activity {
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setStrokeWidth(dp(1.8f));
+            paint.setStrokeWidth(dp(2.4f));
         }
 
         void setActive(boolean active) {
@@ -1244,25 +1243,26 @@ public class LockActivity extends Activity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            paint.setColor(active ? 0xDFFFFFFF : 0x55FFFFFF);
-
+            int iconColor = active ? 0xEFFFFFFF : 0xCCFFFFFF;
             float cx = getWidth() * 0.5f;
             float cy = getHeight() * 0.5f;
-            float radius = dp(9.5f);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(2.2f));
-            arcBounds.set(cx - radius, cy - radius, cx + radius, cy + radius);
-            canvas.drawArc(arcBounds, 125, 285, false, paint);
 
-            float arrowX = cx - dp(8.4f);
-            float arrowY = cy - dp(5.2f);
-            arrowHead.reset();
-            arrowHead.moveTo(arrowX, arrowY);
-            arrowHead.lineTo(arrowX + dp(7.2f), arrowY - dp(1.2f));
-            arrowHead.lineTo(arrowX + dp(2.2f), arrowY + dp(6.1f));
-            arrowHead.close();
-            paint.setStyle(Paint.Style.FILL);
-            canvas.drawPath(arrowHead, paint);
+            paint.setStyle(Paint.Style.STROKE);
+            arrowPath.reset();
+            arrowPath.moveTo(cx - dp(4), cy - dp(10));
+            arrowPath.lineTo(cx - dp(14), cy - dp(4));
+            arrowPath.lineTo(cx - dp(5), cy + dp(3));
+            arrowPath.moveTo(cx - dp(7), cy - dp(4));
+            arrowPath.cubicTo(cx + dp(3), cy - dp(13), cx + dp(17), cy - dp(8), cx + dp(17), cy + dp(3));
+            arrowPath.cubicTo(cx + dp(17), cy + dp(13), cx + dp(4), cy + dp(16), cx - dp(4), cy + dp(10));
+
+            paint.setColor(0x66000000);
+            paint.setStrokeWidth(dp(5f));
+            canvas.drawPath(arrowPath, paint);
+
+            paint.setColor(iconColor);
+            paint.setStrokeWidth(dp(2.8f));
+            canvas.drawPath(arrowPath, paint);
         }
     }
 
