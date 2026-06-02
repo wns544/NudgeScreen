@@ -4,8 +4,6 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.KeyguardManager;
-import android.app.WallpaperColors;
-import android.app.WallpaperManager;
 import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -13,7 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -90,7 +87,6 @@ public class LockActivity extends Activity {
     private View draggingNextDivider;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
-    private int lastWallpaperId = Integer.MIN_VALUE;
     private String lastBackgroundKey = "";
     private ValueAnimator inputBlockHeightAnimator;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -250,18 +246,11 @@ public class LockActivity extends Activity {
             return;
         }
 
-        WallpaperManager wallpaperManager = WallpaperManager.getInstance(this);
-        int wallpaperId = currentWallpaperId(wallpaperManager);
-        String backgroundKey = "colors:" + wallpaperId;
-        if (!force && backgroundKey.equals(lastBackgroundKey) && wallpaperBackground.getBackground() != null) {
-            return;
-        }
-
         wallpaperBackground.setImageDrawable(null);
-        wallpaperBackground.setBackground(wallpaperGradient(wallpaperManager));
-        lastWallpaperId = wallpaperId;
-        lastBackgroundKey = backgroundKey;
-        DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper color background updated id=" + wallpaperId);
+        wallpaperBackground.setBackgroundColor(0x00000000);
+        wallpaperBackground.setVisibility(View.GONE);
+        lastBackgroundKey = "system-wallpaper";
+        DiagnosticLog.record(this, "NudgeLockActivity", "using system wallpaper background");
     }
 
     private boolean applySelectedWallpaperImage(String imageUri, boolean force) {
@@ -289,10 +278,12 @@ public class LockActivity extends Activity {
         }
 
         try {
-            wallpaperBackground.setBackgroundColor(0xFF303030);
+            wallpaperBackground.setVisibility(View.VISIBLE);
+            wallpaperBackground.setBackgroundColor(0x00000000);
             wallpaperBackground.setScaleType(ImageView.ScaleType.CENTER_CROP);
             wallpaperBackground.setImageURI(uri);
             if (wallpaperBackground.getDrawable() == null) {
+                wallpaperBackground.setVisibility(View.GONE);
                 DiagnosticLog.record(this, "NudgeLockActivity", "selected background decode failed uri=" + uri);
                 return false;
             }
@@ -301,73 +292,19 @@ public class LockActivity extends Activity {
             return true;
         } catch (RuntimeException e) {
             wallpaperBackground.setImageDrawable(null);
+            wallpaperBackground.setVisibility(View.GONE);
             DiagnosticLog.record(this, "NudgeLockActivity", "selected background apply failed uri=" + uri, e);
             return false;
         }
-    }
-
-    private int currentWallpaperId(WallpaperManager wallpaperManager) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            return 0;
-        }
-
-        try {
-            int lockWallpaperId = wallpaperManager.getWallpaperId(WallpaperManager.FLAG_LOCK);
-            if (lockWallpaperId > 0) {
-                return lockWallpaperId;
-            }
-            return wallpaperManager.getWallpaperId(WallpaperManager.FLAG_SYSTEM);
-        } catch (RuntimeException e) {
-            DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper id lookup failed", e);
-            return 0;
-        }
-    }
-
-    private GradientDrawable wallpaperGradient(WallpaperManager wallpaperManager) {
-        int primary = 0xFF3B3B3B;
-        int secondary = 0xFF242424;
-        int tertiary = 0xFF151515;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
-                WallpaperColors colors = wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_LOCK);
-                if (colors == null) {
-                    colors = wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
-                }
-                if (colors != null) {
-                    primary = colorToArgb(colors.getPrimaryColor(), primary);
-                    secondary = colorToArgb(colors.getSecondaryColor(), darken(primary, 0.72f));
-                    tertiary = colorToArgb(colors.getTertiaryColor(), darken(primary, 0.48f));
-                }
-            } catch (RuntimeException e) {
-                DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper color lookup failed", e);
-            }
-        }
-
-        return new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{darken(primary, 0.80f), darken(secondary, 0.74f), darken(tertiary, 0.68f)}
-        );
-    }
-
-    private int colorToArgb(Color color, int fallback) {
-        return color == null ? fallback : color.toArgb();
-    }
-
-    private int darken(int color, float factor) {
-        return Color.argb(
-                Color.alpha(color),
-                Math.round(Color.red(color) * factor),
-                Math.round(Color.green(color) * factor),
-                Math.round(Color.blue(color) * factor)
-        );
     }
 
     private View buildContent() {
         FrameLayout shell = new CurtainFrameLayout(this);
 
         wallpaperBackground = new ImageView(this);
-        wallpaperBackground.setBackgroundColor(0xFF303030);
+        wallpaperBackground.setBackgroundColor(0x00000000);
         wallpaperBackground.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        wallpaperBackground.setVisibility(View.GONE);
         shell.addView(wallpaperBackground, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
