@@ -1194,23 +1194,20 @@ public class LockActivity extends Activity {
             rect.set(left, top, right, bottom);
             canvas.drawRoundRect(rect, dp(2.5f), dp(2.5f), paint);
 
+            float shackleLeft = cx - dp(7);
+            float shackleRight = cx + dp(7);
+            float shackleTop = top - dp(12);
+            float shackleBottom = top + dp(2);
+            float shackleLegStart = shackleTop + dp(7);
             if (locked) {
-                float shackleLeft = cx - dp(7);
-                float shackleRight = cx + dp(7);
-                float shackleTop = top - dp(16);
-                float shackleBottom = top + dp(2);
                 rect.set(shackleLeft, shackleTop, shackleRight, shackleBottom);
                 canvas.drawArc(rect, 180, 180, false, paint);
-                canvas.drawLine(shackleLeft, shackleTop + dp(9), shackleLeft, top, paint);
-                canvas.drawLine(shackleRight, shackleTop + dp(9), shackleRight, top, paint);
+                canvas.drawLine(shackleLeft, shackleLegStart, shackleLeft, top, paint);
+                canvas.drawLine(shackleRight, shackleLegStart, shackleRight, top, paint);
             } else {
-                float shackleLeft = cx + dp(1);
-                float shackleRight = cx + dp(15);
-                float shackleTop = top - dp(17);
-                float shackleBottom = top + dp(1);
                 rect.set(shackleLeft, shackleTop, shackleRight, shackleBottom);
                 canvas.drawArc(rect, 180, 145, false, paint);
-                canvas.drawLine(shackleLeft, shackleTop + dp(9), shackleLeft, top, paint);
+                canvas.drawLine(shackleLeft, shackleLegStart, shackleLeft, top, paint);
             }
 
             paint.setStyle(Paint.Style.FILL);
