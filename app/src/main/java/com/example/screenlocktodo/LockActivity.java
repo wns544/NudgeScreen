@@ -1201,25 +1201,18 @@ public class LockActivity extends Activity {
             rect.set(left, top, right, bottom);
             canvas.drawRoundRect(rect, dp(3.5f), dp(3.5f), paint);
 
-            float shackleLeft = cx - dp(7);
-            float shackleRight = cx + dp(7);
-            float shackleTop = top - dp(16);
-            float shackleShoulderY = top + dp(1);
-            shacklePath.reset();
-            shacklePath.moveTo(shackleLeft, shackleShoulderY);
-            shacklePath.lineTo(shackleLeft, shackleTop + dp(8));
-            rect.set(shackleLeft, shackleTop, shackleRight, shackleTop + dp(18));
-            shacklePath.arcTo(rect, 180, 180, false);
-            shacklePath.lineTo(shackleRight, shackleShoulderY);
-
-            if (!locked) {
-                canvas.save();
-                canvas.rotate(-24f, cx + dp(6), top - dp(8));
-                canvas.translate(dp(8), -dp(1));
-                canvas.drawPath(shacklePath, paint);
-                canvas.restore();
+            if (locked) {
+                float shackleLeft = cx - dp(7);
+                float shackleRight = cx + dp(7);
+                float shackleTop = top - dp(16);
+                float shackleShoulderY = top + dp(1);
+                drawShackle(canvas, shackleLeft, shackleRight, shackleTop, shackleShoulderY);
             } else {
-                canvas.drawPath(shacklePath, paint);
+                float shackleLeft = cx + dp(2);
+                float shackleRight = cx + dp(16);
+                float shackleTop = top - dp(17);
+                float shackleShoulderY = top - dp(1);
+                drawShackle(canvas, shackleLeft, shackleRight, shackleTop, shackleShoulderY);
             }
 
             paint.setStyle(Paint.Style.FILL);
@@ -1227,6 +1220,16 @@ public class LockActivity extends Activity {
             canvas.drawCircle(cx, top + dp(7), dp(3.1f), paint);
             rect.set(cx - dp(1.2f), top + dp(8), cx + dp(1.2f), top + dp(13));
             canvas.drawRoundRect(rect, dp(1.2f), dp(1.2f), paint);
+        }
+
+        private void drawShackle(Canvas canvas, float left, float right, float top, float shoulderY) {
+            shacklePath.reset();
+            shacklePath.moveTo(left, shoulderY);
+            shacklePath.lineTo(left, top + dp(8));
+            rect.set(left, top, right, top + dp(18));
+            shacklePath.arcTo(rect, 180, 180, false);
+            shacklePath.lineTo(right, shoulderY);
+            canvas.drawPath(shacklePath, paint);
         }
     }
 
