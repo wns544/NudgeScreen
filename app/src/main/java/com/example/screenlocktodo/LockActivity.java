@@ -181,6 +181,11 @@ public class LockActivity extends Activity {
         return lastVisibleAt;
     }
 
+    static void markHiddenByScreenOff() {
+        visible = false;
+        lastVisibleAt = 0L;
+    }
+
     private void configureLockWindow() {
         boolean turnScreenOn = getIntent().getBooleanExtra(EXTRA_TURN_SCREEN_ON, true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {

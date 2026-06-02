@@ -77,6 +77,9 @@ public class LockMonitorService extends Service {
                 DiagnosticLog.record(context, TAG, "screen event off " + displayStateSummary(context));
                 waitingForScreenOffUnlock = true;
                 lastScreenOffAt = SystemClock.elapsedRealtime();
+                LockActivity.markHiddenByScreenOff();
+                lastLockNotificationAt = 0L;
+                handler.removeCallbacksAndMessages(null);
                 cancelLockNotification(context);
                 TodoStore.warm(context);
                 preArmLockScreen(context);
@@ -283,6 +286,9 @@ public class LockMonitorService extends Service {
             DiagnosticLog.record(this, TAG, "display resting state=" + state + " " + displayStateSummary(this));
             waitingForScreenOffUnlock = true;
             lastScreenOffAt = SystemClock.elapsedRealtime();
+            LockActivity.markHiddenByScreenOff();
+            lastLockNotificationAt = 0L;
+            handler.removeCallbacksAndMessages(null);
             cancelLockNotification(this);
             TodoStore.warm(this);
             preArmLockScreen(this);
