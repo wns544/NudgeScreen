@@ -452,6 +452,15 @@ public class LockMonitorService extends Service {
             wakeLock.acquire(3000);
         }
 
+        if (allowNotificationFallback && canUseFullScreenIntent(context)) {
+            if (postFullScreenLockNotification(context, lockIntent, attemptId, "primary")) {
+                scheduleLockVisibilityCheck(context.getApplicationContext(), attemptId, source, attemptAt);
+                return;
+            }
+            DiagnosticLog.record(context, TAG, "primary full-screen notification unavailable id=" + attemptId
+                    + "; trying direct launch");
+        }
+
         launchLockActivity(context, lockIntent);
         scheduleLockVisibilityCheck(context.getApplicationContext(), attemptId, source, attemptAt);
 
@@ -465,10 +474,15 @@ public class LockMonitorService extends Service {
             return;
         }
 
+        postFullScreenLockNotification(context, lockIntent, attemptId, "fallback");
+    }
+
+    private boolean postFullScreenLockNotification(Context context, Intent lockIntent, long attemptId, String mode) {
         long now = SystemClock.elapsedRealtime();
         if (now - lastLockNotificationAt < LOCK_NOTIFICATION_COOLDOWN_MS) {
-            DiagnosticLog.record(context, TAG, "notification fallback skipped id=" + attemptId + " by cooldown");
-            return;
+            DiagnosticLog.record(context, TAG, "full-screen notification skipped id=" + attemptId
+                    + " mode=" + mode + " by cooldown");
+            return false;
         }
         lastLockNotificationAt = now;
 
@@ -496,9 +510,13 @@ public class LockMonitorService extends Service {
 
         NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
-            DiagnosticLog.record(context, TAG, "posting full-screen notification fallback id=" + attemptId);
+            DiagnosticLog.record(context, TAG, "posting full-screen notification id=" + attemptId + " mode=" + mode);
             manager.notify(LOCK_NOTIFICATION_ID, notification);
+            return true;
         }
+        DiagnosticLog.record(context, TAG, "full-screen notification skipped id=" + attemptId
+                + " mode=" + mode + "; notification manager unavailable");
+        return false;
     }
 
     private void scheduleLockVisibilityCheck(Context context, long attemptId, String source, long attemptAt) {
