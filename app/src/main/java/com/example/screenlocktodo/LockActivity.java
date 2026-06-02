@@ -4,6 +4,8 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.KeyguardManager;
+import android.app.WallpaperColors;
+import android.app.WallpaperManager;
 import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -11,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
@@ -64,6 +67,7 @@ public class LockActivity extends Activity {
     private TextView menuButton;
     private LinearLayout menuPanel;
     private LockToggleView lockButton;
+    private View wallpaperBackground;
     private View curtainBackground;
     private FrameLayout curtainContent;
     private TodoItem lastDeletedItem;
@@ -82,6 +86,7 @@ public class LockActivity extends Activity {
     private View draggingNextDivider;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
+    private int lastWallpaperId = Integer.MIN_VALUE;
     private ValueAnimator inputBlockHeightAnimator;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final BroadcastReceiver clockReceiver = new BroadcastReceiver() {
@@ -131,6 +136,7 @@ public class LockActivity extends Activity {
         DiagnosticLog.recordAppState(this, "lock activity onNewIntent turnScreenOn=" + intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
         configureLockWindow();
         LockMonitorService.cancelLockNotification(this);
+        updateWallpaperBackground(true);
         updateClock();
         refreshTodos();
     }
@@ -143,6 +149,7 @@ public class LockActivity extends Activity {
         super.onResume();
         DiagnosticLog.recordAppState(this, "lock activity onResume");
         LockMonitorService.cancelLockNotification(this);
+        updateWallpaperBackground(false);
         updateClock();
         registerClockReceiver();
         refreshTodos();
@@ -228,8 +235,88 @@ public class LockActivity extends Activity {
         }
     }
 
+    private void updateWallpaperBackground(boolean force) {
+        if (wallpaperBackground == null) {
+            return;
+        }
+
+        WallpaperManager wallpaperManager = WallpaperManager.getInstance(this);
+        int wallpaperId = currentWallpaperId(wallpaperManager);
+        if (!force && wallpaperId == lastWallpaperId && wallpaperBackground.getBackground() != null) {
+            return;
+        }
+
+        wallpaperBackground.setBackground(wallpaperGradient(wallpaperManager));
+        lastWallpaperId = wallpaperId;
+        DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper color background updated id=" + wallpaperId);
+    }
+
+    private int currentWallpaperId(WallpaperManager wallpaperManager) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return 0;
+        }
+
+        try {
+            int lockWallpaperId = wallpaperManager.getWallpaperId(WallpaperManager.FLAG_LOCK);
+            if (lockWallpaperId > 0) {
+                return lockWallpaperId;
+            }
+            return wallpaperManager.getWallpaperId(WallpaperManager.FLAG_SYSTEM);
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper id lookup failed", e);
+            return 0;
+        }
+    }
+
+    private GradientDrawable wallpaperGradient(WallpaperManager wallpaperManager) {
+        int primary = 0xFF3B3B3B;
+        int secondary = 0xFF242424;
+        int tertiary = 0xFF151515;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                WallpaperColors colors = wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_LOCK);
+                if (colors == null) {
+                    colors = wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
+                }
+                if (colors != null) {
+                    primary = colorToArgb(colors.getPrimaryColor(), primary);
+                    secondary = colorToArgb(colors.getSecondaryColor(), darken(primary, 0.72f));
+                    tertiary = colorToArgb(colors.getTertiaryColor(), darken(primary, 0.48f));
+                }
+            } catch (RuntimeException e) {
+                DiagnosticLog.record(this, "NudgeLockActivity", "wallpaper color lookup failed", e);
+            }
+        }
+
+        return new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{darken(primary, 0.80f), darken(secondary, 0.74f), darken(tertiary, 0.68f)}
+        );
+    }
+
+    private int colorToArgb(Color color, int fallback) {
+        return color == null ? fallback : color.toArgb();
+    }
+
+    private int darken(int color, float factor) {
+        return Color.argb(
+                Color.alpha(color),
+                Math.round(Color.red(color) * factor),
+                Math.round(Color.green(color) * factor),
+                Math.round(Color.blue(color) * factor)
+        );
+    }
+
     private View buildContent() {
         FrameLayout shell = new CurtainFrameLayout(this);
+
+        wallpaperBackground = new View(this);
+        wallpaperBackground.setBackgroundColor(0xFF303030);
+        shell.addView(wallpaperBackground, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        updateWallpaperBackground(true);
 
         curtainBackground = new View(this);
         curtainBackground.setBackgroundColor(overlayColor());
