@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Nudge Todo</string>
+    <string name="app_name">Nudge Screen</string>
     <string name="status_running">執行中</string>
     <string name="status_paused">已暫停</string>
     <string name="curtain_both">雙向簾幕</string>
@@ -32,12 +32,12 @@
     <string name="edit_todo">編輯待辦</string>
     <string name="cancel">取消</string>
     <string name="save">儲存</string>
-    <string name="service_notification_title">Nudge Todo 執行中</string>
+    <string name="service_notification_title">Nudge Screen 執行中</string>
     <string name="service_notification_text">開啟螢幕時會顯示待辦簾幕。</string>
     <string name="lock_notification_title">查看今天的待辦</string>
     <string name="lock_notification_text">解鎖前先查看待辦事項。</string>
-    <string name="service_channel_name">Nudge Todo 狀態</string>
+    <string name="service_channel_name">Nudge Screen 狀態</string>
     <string name="service_channel_description">用於偵測螢幕喚醒事件的安靜狀態通知。</string>
-    <string name="lock_channel_name">Nudge Todo 簾幕</string>
+    <string name="lock_channel_name">Nudge Screen 簾幕</string>
     <string name="lock_channel_description">用於在鎖定畫面上顯示待辦簾幕的通知。</string>
 </resources>
