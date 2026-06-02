@@ -49,4 +49,12 @@
     <string name="diagnostics_share_subject">Nudge Screen diagnostic log</string>
     <string name="device_admin_description">用於在鎖定簾幕上雙擊以關閉螢幕。</string>
     <string name="device_admin_explanation">允許 Nudge Screen 在你雙擊鎖定簾幕空白區域時關閉螢幕。</string>
+    <string name="language_setting">語言</string>
+    <string name="language_system">系統預設</string>
+    <string name="language_korean">한국어</string>
+    <string name="language_english">English</string>
+    <string name="language_traditional_chinese">繁體中文</string>
+    <string name="full_screen_alert_action">允許全螢幕提醒</string>
+    <string name="full_screen_alert_title">請開啟全螢幕提醒</string>
+    <string name="full_screen_alert_body">若要在鎖定畫面上顯示待辦簾幕，需要允許全螢幕提醒。\n\n開啟「設定」→「應用程式」→「特殊存取」→「全螢幕提醒」→「Nudge Screen」，然後開啟允許。</string>
 </resources>

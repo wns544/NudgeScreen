@@ -33,9 +33,12 @@ public class LockMonitorService extends Service {
     static final long KEEP_ALIVE_DELAY_MS = 5 * 60 * 1000L;
     private static final long LOCK_NOTIFICATION_COOLDOWN_MS = 15000L;
     private static final long UNLOCK_FROM_SCREEN_OFF_WINDOW_MS = 8000L;
+    private static final long LOCK_VISIBILITY_CHECK_DELAY_MS = 1800L;
+    private static final long RECENT_VISIBLE_SKIP_MS = 1500L;
     private static final long[] SCREEN_ON_RETRY_DELAYS_MS = {250L, 900L};
     private static final long[] USER_PRESENT_RETRY_DELAYS_MS = {250L, 1000L};
     private static final long PRE_ARM_COOLDOWN_MS = 2500L;
+    private long nextLockAttemptId;
     private long lastLockNotificationAt;
     private long lastPreArmAt;
     private long lastScreenOffAt;
@@ -68,28 +71,34 @@ public class LockMonitorService extends Service {
             }
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
-                DiagnosticLog.record(context, TAG, "screen off");
+                DiagnosticLog.record(context, TAG, "screen event off " + displayStateSummary(context));
                 waitingForScreenOffUnlock = true;
                 lastScreenOffAt = SystemClock.elapsedRealtime();
                 cancelLockNotification(context);
                 TodoStore.warm(context);
                 preArmLockScreen(context);
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
-                DiagnosticLog.record(context, TAG, "screen on");
-                showLockScreen(context, true, true, true);
-                scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
+                DiagnosticLog.record(context, TAG, "screen event on " + displayStateSummary(context));
+                showLockScreen(context, true, true, true, "screen_on");
+                scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS, "screen_on_retry");
             } else if (Intent.ACTION_USER_PRESENT.equals(action)) {
-                DiagnosticLog.record(context, TAG, "user present recentScreenOff=" + wasRecentlyScreenOff());
+                DiagnosticLog.record(context, TAG, "screen event user_present recentScreenOff=" + wasRecentlyScreenOff()
+                        + " " + displayStateSummary(context));
                 if (wasRecentlyScreenOff()) {
                     waitingForScreenOffUnlock = false;
-                    showLockScreen(context, false, true, true);
-                    scheduleLockScreenRetries(false, true, true, USER_PRESENT_RETRY_DELAYS_MS);
+                    showLockScreen(context, false, true, true, "user_present");
+                    scheduleLockScreenRetries(false, true, true, USER_PRESENT_RETRY_DELAYS_MS, "user_present_retry");
                 }
             }
         }
     };
 
     private boolean registered;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase));
+    }
 
     public static void start(Context context) {
         if (!AppSettings.lockScreenEnabled(context)) {
@@ -268,17 +277,17 @@ public class LockMonitorService extends Service {
 
         int state = display.getState();
         if (state == Display.STATE_OFF || state == Display.STATE_DOZE || state == Display.STATE_DOZE_SUSPEND) {
-            DiagnosticLog.record(this, TAG, "display resting state=" + state);
+            DiagnosticLog.record(this, TAG, "display resting state=" + state + " " + displayStateSummary(this));
             waitingForScreenOffUnlock = true;
             lastScreenOffAt = SystemClock.elapsedRealtime();
             cancelLockNotification(this);
             TodoStore.warm(this);
             preArmLockScreen(this);
         } else if (state == Display.STATE_ON && wasRecentlyScreenOff()) {
-            DiagnosticLog.record(this, TAG, "display on after resting state");
+            DiagnosticLog.record(this, TAG, "display on after resting state " + displayStateSummary(this));
             waitingForScreenOffUnlock = false;
-            showLockScreen(this, false, true, true);
-            scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS);
+            showLockScreen(this, false, true, true, "display_on_after_rest");
+            scheduleLockScreenRetries(false, true, true, SCREEN_ON_RETRY_DELAYS_MS, "display_on_retry");
         }
     }
 
@@ -296,12 +305,13 @@ public class LockMonitorService extends Service {
             boolean wakeDisplay,
             boolean allowBeforeKeyguard,
             boolean allowNotificationFallback,
-            long[] delaysMillis
+            long[] delaysMillis,
+            String source
     ) {
         Context appContext = getApplicationContext();
         for (long delayMillis : delaysMillis) {
             handler.postDelayed(
-                    () -> showLockScreen(appContext, wakeDisplay, allowBeforeKeyguard, allowNotificationFallback),
+                    () -> showLockScreen(appContext, wakeDisplay, allowBeforeKeyguard, allowNotificationFallback, source + "_" + delayMillis + "ms"),
                     delayMillis
             );
         }
@@ -388,22 +398,43 @@ public class LockMonitorService extends Service {
                 .build();
     }
 
-    private void showLockScreen(Context context, boolean wakeDisplay, boolean allowBeforeKeyguard, boolean allowNotificationFallback) {
+    private void showLockScreen(Context context, boolean wakeDisplay, boolean allowBeforeKeyguard, boolean allowNotificationFallback, String source) {
+        long attemptId = ++nextLockAttemptId;
+        long attemptAt = SystemClock.elapsedRealtime();
         if (!AppSettings.lockScreenEnabled(context)) {
-            DiagnosticLog.record(context, TAG, "show lock skipped; disabled");
+            DiagnosticLog.record(context, TAG, "show lock skipped id=" + attemptId + " source=" + source + "; disabled");
             LockMonitorService.stop(context);
             return;
         }
 
         if (!allowBeforeKeyguard && !isKeyguardLocked(context)) {
-            DiagnosticLog.record(context, TAG, "show lock skipped; keyguard not locked");
+            DiagnosticLog.record(context, TAG, "show lock skipped id=" + attemptId + " source=" + source + "; keyguard not locked "
+                    + displayStateSummary(context));
             return;
         }
 
-        DiagnosticLog.recordAppState(context, "show lock wake=" + wakeDisplay
+        DiagnosticLog.recordAppState(context, "show lock id=" + attemptId
+                + " source=" + source
+                + " wake=" + wakeDisplay
                 + " beforeKeyguard=" + allowBeforeKeyguard
                 + " fallback=" + allowNotificationFallback
-                + " keyguardLocked=" + isKeyguardLocked(context));
+                + " " + displayStateSummary(context));
+
+        long lastVisibleAgeMs = ageMs(LockActivity.lastVisibleAt());
+        if (LockActivity.isShowing() && (LockActivity.isVisible()
+                || (lastVisibleAgeMs >= 0 && lastVisibleAgeMs < RECENT_VISIBLE_SKIP_MS))) {
+            DiagnosticLog.record(context, TAG, "show lock skipped id=" + attemptId + " source=" + source
+                    + "; lock activity already showing visible=" + LockActivity.isVisible()
+                    + " lastVisibleAgeMs=" + lastVisibleAgeMs);
+            cancelLockNotification(context);
+            return;
+        }
+        if (LockActivity.isShowing()) {
+            DiagnosticLog.record(context, TAG, "stale lock activity state ignored id=" + attemptId
+                    + " source=" + source
+                    + " visible=" + LockActivity.isVisible()
+                    + " lastVisibleAgeMs=" + lastVisibleAgeMs);
+        }
 
         Intent lockIntent = new Intent(context, LockActivity.class)
                 .putExtra(LockActivity.EXTRA_TURN_SCREEN_ON, wakeDisplay)
@@ -422,15 +453,21 @@ public class LockMonitorService extends Service {
         }
 
         launchLockActivity(context, lockIntent);
+        scheduleLockVisibilityCheck(context.getApplicationContext(), attemptId, source, attemptAt);
 
         if (!allowNotificationFallback) {
-            DiagnosticLog.record(context, TAG, "notification fallback skipped");
+            DiagnosticLog.record(context, TAG, "notification fallback skipped id=" + attemptId);
+            return;
+        }
+
+        if (!canUseFullScreenIntent(context)) {
+            DiagnosticLog.record(context, TAG, "notification fallback skipped id=" + attemptId + "; full-screen intent denied");
             return;
         }
 
         long now = SystemClock.elapsedRealtime();
         if (now - lastLockNotificationAt < LOCK_NOTIFICATION_COOLDOWN_MS) {
-            DiagnosticLog.record(context, TAG, "notification fallback skipped by cooldown");
+            DiagnosticLog.record(context, TAG, "notification fallback skipped id=" + attemptId + " by cooldown");
             return;
         }
         lastLockNotificationAt = now;
@@ -459,9 +496,31 @@ public class LockMonitorService extends Service {
 
         NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
         if (manager != null) {
-            DiagnosticLog.record(context, TAG, "posting full-screen notification fallback");
+            DiagnosticLog.record(context, TAG, "posting full-screen notification fallback id=" + attemptId);
             manager.notify(LOCK_NOTIFICATION_ID, notification);
         }
+    }
+
+    private void scheduleLockVisibilityCheck(Context context, long attemptId, String source, long attemptAt) {
+        handler.postDelayed(() -> {
+            long lastVisibleAt = LockActivity.lastVisibleAt();
+            boolean becameVisible = lastVisibleAt >= attemptAt;
+            if (becameVisible) {
+                DiagnosticLog.record(context, TAG, "lock visibility confirmed id=" + attemptId
+                        + " source=" + source
+                        + " delayMs=" + (lastVisibleAt - attemptAt)
+                        + " visible=" + LockActivity.isVisible()
+                        + " showing=" + LockActivity.isShowing());
+                return;
+            }
+            DiagnosticLog.record(context, TAG, "LOCK VISIBILITY MISS id=" + attemptId
+                    + " source=" + source
+                    + " waitedMs=" + LOCK_VISIBILITY_CHECK_DELAY_MS
+                    + " visible=" + LockActivity.isVisible()
+                    + " showing=" + LockActivity.isShowing()
+                    + " lastVisibleAgeMs=" + ageMs(lastVisibleAt)
+                    + " " + displayStateSummary(context));
+        }, LOCK_VISIBILITY_CHECK_DELAY_MS);
     }
 
     private void launchLockActivity(Context context, Intent lockIntent) {
@@ -491,6 +550,42 @@ public class LockMonitorService extends Service {
         } catch (RuntimeException e) {
             DiagnosticLog.record(context, TAG, "direct lock launch failed", e);
         }
+    }
+
+    private boolean canUseFullScreenIntent(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return true;
+        }
+        NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+        return manager != null && manager.canUseFullScreenIntent();
+    }
+
+    private String displayStateSummary(Context context) {
+        PowerManager powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
+        return "interactive=" + (powerManager != null && powerManager.isInteractive())
+                + " keyguardLocked=" + isKeyguardLocked(context)
+                + " fullScreenIntent=" + canUseFullScreenIntent(context)
+                + " displayState=" + defaultDisplayState(context)
+                + " screenOffAgeMs=" + ageMs(lastScreenOffAt);
+    }
+
+    private int defaultDisplayState(Context context) {
+        DisplayManager manager = displayManager;
+        if (manager == null) {
+            manager = (DisplayManager) context.getSystemService(DISPLAY_SERVICE);
+        }
+        if (manager == null) {
+            return -1;
+        }
+        Display display = manager.getDisplay(Display.DEFAULT_DISPLAY);
+        return display == null ? -1 : display.getState();
+    }
+
+    private long ageMs(long timestamp) {
+        if (timestamp <= 0) {
+            return -1;
+        }
+        return SystemClock.elapsedRealtime() - timestamp;
     }
 
     private Bundle pendingIntentCreatorOptions() {

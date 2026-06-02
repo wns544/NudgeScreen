@@ -43,6 +43,9 @@ import java.util.Locale;
 
 public class LockActivity extends Activity {
     static final String EXTRA_TURN_SCREEN_ON = "com.example.screenlocktodo.TURN_SCREEN_ON";
+    private static volatile boolean showing;
+    private static volatile boolean visible;
+    private static volatile long lastVisibleAt;
     private static final long TODO_DOUBLE_TAP_MS = 420L;
     private static final long CURTAIN_DOUBLE_TAP_MS = 360L;
 
@@ -88,7 +91,13 @@ public class LockActivity extends Activity {
     };
 
     @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
+        showing = true;
         configureLockWindow();
         super.onCreate(savedInstanceState);
         DiagnosticLog.recordAppState(this, "lock activity onCreate turnScreenOn=" + getIntent().getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
@@ -115,6 +124,7 @@ public class LockActivity extends Activity {
 
     @Override
     protected void onNewIntent(android.content.Intent intent) {
+        showing = true;
         super.onNewIntent(intent);
         setIntent(intent);
         DiagnosticLog.recordAppState(this, "lock activity onNewIntent turnScreenOn=" + intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
@@ -126,6 +136,9 @@ public class LockActivity extends Activity {
 
     @Override
     protected void onResume() {
+        showing = true;
+        visible = true;
+        lastVisibleAt = SystemClock.elapsedRealtime();
         super.onResume();
         DiagnosticLog.recordAppState(this, "lock activity onResume");
         LockMonitorService.cancelLockNotification(this);
@@ -137,15 +150,35 @@ public class LockActivity extends Activity {
     @Override
     protected void onPause() {
         DiagnosticLog.record(this, "NudgeLockActivity", "onPause");
+        visible = false;
         unregisterClockReceiver();
         super.onPause();
     }
 
     @Override
+    protected void onStop() {
+        DiagnosticLog.record(this, "NudgeLockActivity", "onStop finishing=" + isFinishing());
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         DiagnosticLog.record(this, "NudgeLockActivity", "onDestroy");
+        showing = false;
         unregisterClockReceiver();
         super.onDestroy();
+    }
+
+    static boolean isShowing() {
+        return showing;
+    }
+
+    static boolean isVisible() {
+        return visible;
+    }
+
+    static long lastVisibleAt() {
+        return lastVisibleAt;
     }
 
     private void configureLockWindow() {

@@ -3,6 +3,7 @@ package com.example.screenlocktodo;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.LocaleManager;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +16,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.LocaleList;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -27,6 +29,8 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -58,6 +62,11 @@ public class MainActivity extends Activity {
     private float drawerDownY;
     private boolean drawerSwiping;
     private boolean drawerOpening;
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -390,6 +399,8 @@ public class MainActivity extends Activity {
             closeDrawer();
             openNotificationSettings();
         }, false));
+        drawerPanel.addView(actionRow(getString(R.string.language_setting) + " · " + currentLanguageName(), v -> showLanguageDialog(), false));
+        drawerPanel.addView(actionRow(getString(R.string.full_screen_alert_action), v -> showFullScreenIntentGuide(), false));
         drawerPanel.addView(drawerSectionTitle(getString(R.string.battery_help_title)));
         drawerPanel.addView(actionRow(getString(R.string.battery_unrestricted_action), v -> {
             closeDrawer();
@@ -785,6 +796,70 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
+    private void showFullScreenIntentGuide() {
+        DiagnosticLog.recordAppState(this, "open full screen intent guide");
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(20), dp(20), dp(16));
+        box.setBackground(rounded(COLOR_PANEL, 12));
+
+        TextView title = text(getString(R.string.full_screen_alert_title), 20, COLOR_INK, true);
+        box.addView(title);
+
+        TextView body = text(getString(R.string.full_screen_alert_body), 15, COLOR_MUTED, false);
+        body.setPadding(0, dp(10), 0, dp(18));
+        box.addView(body);
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button close = quietButton(getString(R.string.close), COLOR_MUTED);
+        close.setOnClickListener(v -> dialog.dismiss());
+        buttons.addView(close, new LinearLayout.LayoutParams(dp(88), dp(44)));
+
+        Button settings = filledButton(getString(R.string.open_settings));
+        settings.setOnClickListener(v -> {
+            dialog.dismiss();
+            openFullScreenIntentSettings();
+        });
+        LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(dp(132), dp(44));
+        settingsParams.leftMargin = dp(8);
+        buttons.addView(settings, settingsParams);
+        box.addView(buttons);
+
+        dialog.setContentView(box);
+        dialog.show();
+
+        Window dialogWindow = dialog.getWindow();
+        if (dialogWindow != null) {
+            dialogWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
+            dialogWindow.setLayout(
+                    Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(420)),
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private void openFullScreenIntentSettings() {
+        DiagnosticLog.recordAppState(this, "open full screen intent settings");
+        Intent intent;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+                    .setData(Uri.parse("package:" + getPackageName()));
+        } else {
+            intent = appDetailsIntent();
+        }
+        try {
+            startActivity(intent);
+        } catch (RuntimeException ignored) {
+            startActivity(appDetailsIntent());
+        }
+    }
+
     private void openBatterySettings() {
         DiagnosticLog.recordAppState(this, "open battery settings");
         Intent intent = batteryOptimizationIntent();
@@ -895,6 +970,108 @@ public class MainActivity extends Activity {
         }
         NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         return manager != null && !manager.canUseFullScreenIntent();
+    }
+
+    private void showLanguageDialog() {
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(18), dp(20), dp(14));
+        box.setBackground(rounded(COLOR_PANEL, 12));
+
+        TextView title = text(getString(R.string.language_setting), 20, COLOR_INK, true);
+        box.addView(title);
+
+        RadioGroup group = new RadioGroup(this);
+        group.setOrientation(RadioGroup.VERTICAL);
+        group.setPadding(0, dp(12), 0, dp(8));
+
+        addLanguageOption(group, "", getString(R.string.language_system));
+        addLanguageOption(group, "ko", getString(R.string.language_korean));
+        addLanguageOption(group, "en", getString(R.string.language_english));
+        addLanguageOption(group, "zh-TW", getString(R.string.language_traditional_chinese));
+
+        String current = AppSettings.languageTag(this);
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+            if (child instanceof RadioButton && current.equals(String.valueOf(child.getTag()))) {
+                ((RadioButton) child).setChecked(true);
+                break;
+            }
+        }
+
+        group.setOnCheckedChangeListener((radioGroup, checkedId) -> {
+            RadioButton checked = radioGroup.findViewById(checkedId);
+            if (checked == null) {
+                return;
+            }
+            String languageTag = String.valueOf(checked.getTag());
+            applyLanguage(languageTag);
+            dialog.dismiss();
+        });
+        box.addView(group);
+
+        Button close = quietButton(getString(R.string.close), COLOR_MUTED);
+        close.setOnClickListener(v -> dialog.dismiss());
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(dp(96), dp(44));
+        closeParams.gravity = Gravity.RIGHT;
+        box.addView(close, closeParams);
+
+        dialog.setContentView(box);
+        dialog.show();
+
+        Window dialogWindow = dialog.getWindow();
+        if (dialogWindow != null) {
+            dialogWindow.setBackgroundDrawable(new ColorDrawable(0x00000000));
+            dialogWindow.setLayout(
+                    Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(420)),
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+        }
+    }
+
+    private void addLanguageOption(RadioGroup group, String languageTag, String label) {
+        RadioButton option = new RadioButton(this);
+        option.setText(label);
+        option.setTextSize(16);
+        option.setTextColor(COLOR_INK);
+        option.setTag(languageTag);
+        option.setPadding(0, dp(8), 0, dp(8));
+        group.addView(option, new RadioGroup.LayoutParams(
+                RadioGroup.LayoutParams.MATCH_PARENT,
+                dp(48)
+        ));
+    }
+
+    private void applyLanguage(String languageTag) {
+        AppSettings.setLanguageTag(this, languageTag);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            LocaleManager localeManager = getSystemService(LocaleManager.class);
+            if (localeManager != null) {
+                LocaleList locales = languageTag == null || languageTag.length() == 0
+                        ? LocaleList.getEmptyLocaleList()
+                        : LocaleList.forLanguageTags(languageTag);
+                localeManager.setApplicationLocales(locales);
+            }
+        }
+        DiagnosticLog.recordAppState(this, "language changed tag=" + languageTag);
+        recreate();
+    }
+
+    private String currentLanguageName() {
+        String languageTag = AppSettings.languageTag(this);
+        if ("ko".equals(languageTag)) {
+            return getString(R.string.language_korean);
+        }
+        if ("en".equals(languageTag)) {
+            return getString(R.string.language_english);
+        }
+        if ("zh-TW".equals(languageTag)) {
+            return getString(R.string.language_traditional_chinese);
+        }
+        return getString(R.string.language_system);
     }
 
     private LinearLayout card() {

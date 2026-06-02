@@ -16,6 +16,14 @@
     <string name="settings">Settings</string>
     <string name="preview">Preview</string>
     <string name="notification_permission">Notification permission</string>
+    <string name="full_screen_alert_action">Allow full-screen alerts</string>
+    <string name="full_screen_alert_title">Allow full-screen alerts</string>
+    <string name="full_screen_alert_body">Nudge Screen needs full-screen alerts to show the todo curtain over the lock screen.\n\nOpen Settings → Apps → Special access → Full-screen alerts → Nudge Screen, then turn Allow on.</string>
+    <string name="language_setting">Language</string>
+    <string name="language_system">System default</string>
+    <string name="language_korean">한국어</string>
+    <string name="language_english">English</string>
+    <string name="language_traditional_chinese">繁體中文</string>
     <string name="battery_help_title">Todo curtain keeps stopping?</string>
     <string name="battery_unrestricted_action">Set unrestricted battery</string>
     <string name="close">Close</string>

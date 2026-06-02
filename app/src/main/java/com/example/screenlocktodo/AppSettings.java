@@ -13,6 +13,7 @@ final class AppSettings {
     private static final String KEY_OVERLAY_OPACITY = "overlay_opacity";
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
     private static final String KEY_BATTERY_GUIDE_SHOWN = "battery_guide_shown";
+    private static final String KEY_LANGUAGE_TAG = "language_tag";
     private static final int DEFAULT_OVERLAY_OPACITY = 40;
 
     private AppSettings() {
@@ -64,6 +65,14 @@ final class AppSettings {
 
     static void setBatteryGuideShown(Context context, boolean value) {
         prefs(context).edit().putBoolean(KEY_BATTERY_GUIDE_SHOWN, value).apply();
+    }
+
+    static String languageTag(Context context) {
+        return prefs(context).getString(KEY_LANGUAGE_TAG, "");
+    }
+
+    static void setLanguageTag(Context context, String value) {
+        prefs(context).edit().putString(KEY_LANGUAGE_TAG, value == null ? "" : value).apply();
     }
 
     private static SharedPreferences prefs(Context context) {
