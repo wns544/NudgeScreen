@@ -13,6 +13,7 @@ import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
@@ -87,6 +88,8 @@ public class LockActivity extends Activity {
     private View draggingNextDivider;
     private boolean firstTodoRender = true;
     private boolean clockReceiverRegistered;
+    private boolean keyboardVisible;
+    private String pendingInputDraft = "";
     private String lastBackgroundKey = "";
     private ValueAnimator inputBlockHeightAnimator;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -116,17 +119,31 @@ public class LockActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // The curtain is dismissed only by the unlock swipe, not by system back.
+        handleSystemBack();
     }
 
     private void registerBackHandler() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                     OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-                    () -> {
-                    }
+                    this::handleSystemBack
             );
         }
+    }
+
+    private void handleSystemBack() {
+        if (inputBlock != null && inputBlock.getVisibility() == View.VISIBLE) {
+            if (keyboardVisible) {
+                hideKeyboard();
+                if (input != null) {
+                    input.clearFocus();
+                }
+                return;
+            }
+            saveInputDraft();
+            hideInput(false);
+        }
+        // The curtain itself is dismissed only by the unlock swipe, not by system back.
     }
 
     @Override
@@ -470,6 +487,7 @@ public class LockActivity extends Activity {
 
         curtainContent.addView(menuButton, menuParams);
         curtainContent.addView(menuPanel, panelParams);
+        registerKeyboardVisibilityWatcher(shell);
         return shell;
     }
 
@@ -542,16 +560,15 @@ public class LockActivity extends Activity {
 
     private void addTodo() {
         if (input.getText().toString().trim().length() == 0) {
-            hideInput();
+            pendingInputDraft = "";
+            input.setText("");
+            hideInput(true);
             return;
         }
         TodoStore.add(this, input.getText().toString());
+        pendingInputDraft = "";
         input.setText("");
-        hideInput();
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm != null) {
-            imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
-        }
+        hideInput(true);
         refreshTodos();
     }
 
@@ -1050,9 +1067,10 @@ public class LockActivity extends Activity {
 
     private void toggleInput() {
         if (inputBlock.getVisibility() == View.VISIBLE) {
-            hideInput();
+            closeInputFromButton();
             return;
         }
+        restoreInputDraft();
         animatePlusOpen();
         updateTopTodoDividerVisibility(false);
         inputBlock.animate().cancel();
@@ -1075,6 +1093,16 @@ public class LockActivity extends Activity {
     }
 
     private void hideInput() {
+        hideInput(false);
+    }
+
+    private void hideInput(boolean hideKeyboard) {
+        if (hideKeyboard) {
+            hideKeyboard();
+            if (input != null) {
+                input.clearFocus();
+            }
+        }
         animatePlusClosed();
         inputBlock.animate().cancel();
         cancelInputBlockHeightAnimation();
@@ -1087,6 +1115,45 @@ public class LockActivity extends Activity {
                 .translationY(-dp(8))
                 .setDuration(170)
                 .start();
+    }
+
+    private void closeInputFromButton() {
+        pendingInputDraft = "";
+        if (input != null) {
+            input.setText("");
+        }
+        hideInput(true);
+    }
+
+    private void saveInputDraft() {
+        pendingInputDraft = input == null ? "" : input.getText().toString();
+    }
+
+    private void restoreInputDraft() {
+        if (input == null || pendingInputDraft.length() == 0) {
+            return;
+        }
+        input.setText(pendingInputDraft);
+        input.setSelection(input.getText().length());
+    }
+
+    private void hideKeyboard() {
+        if (input == null) {
+            return;
+        }
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
+        }
+    }
+
+    private void registerKeyboardVisibilityWatcher(View root) {
+        root.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            Rect visibleFrame = new Rect();
+            root.getWindowVisibleDisplayFrame(visibleFrame);
+            int hiddenHeight = root.getRootView().getHeight() - visibleFrame.height();
+            keyboardVisible = hiddenHeight > dp(140);
+        });
     }
 
     private int inputBlockTargetHeight() {
