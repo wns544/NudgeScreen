@@ -49,6 +49,7 @@
     <string name="diagnostics_clear">Clear</string>
     <string name="diagnostics_empty">No diagnostic log entries yet.</string>
     <string name="diagnostics_share_subject">Nudge Screen diagnostic log</string>
+    <string name="device_admin_action">雙擊關閉螢幕權限</string>
     <string name="device_admin_description">用於在鎖定簾幕上雙擊以關閉螢幕。</string>
     <string name="device_admin_explanation">允許 Nudge Screen 在你雙擊鎖定簾幕空白區域時關閉螢幕。</string>
     <string name="language_setting">語言</string>

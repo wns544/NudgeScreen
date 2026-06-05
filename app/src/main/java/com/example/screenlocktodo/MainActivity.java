@@ -2,9 +2,11 @@ package com.example.screenlocktodo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.admin.DevicePolicyManager;
 import android.app.Dialog;
 import android.app.LocaleManager;
 import android.app.NotificationManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -419,6 +421,10 @@ public class MainActivity extends Activity {
         }, false));
         drawerPanel.addView(actionRow(getString(R.string.language_setting) + " · " + currentLanguageName(), v -> showLanguageDialog(), false));
         drawerPanel.addView(actionRow(getString(R.string.full_screen_alert_action), v -> showFullScreenIntentGuide(), false));
+        drawerPanel.addView(actionRow(getString(R.string.device_admin_action), v -> {
+            closeDrawer();
+            openDeviceAdminSettings();
+        }, false));
         drawerPanel.addView(drawerSectionTitle(getString(R.string.battery_help_title)));
         drawerPanel.addView(actionRow(getString(R.string.battery_unrestricted_action), v -> {
             closeDrawer();
@@ -940,6 +946,20 @@ public class MainActivity extends Activity {
         try {
             startActivity(intent);
         } catch (Exception ignored) {
+            startActivity(appDetailsIntent());
+        }
+    }
+
+    private void openDeviceAdminSettings() {
+        DiagnosticLog.recordAppState(this, "open device admin settings");
+        ComponentName admin = new ComponentName(this, NudgeDeviceAdminReceiver.class);
+        Intent intent = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, getString(R.string.device_admin_explanation));
+        try {
+            startActivity(intent);
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeMain", "device admin request failed", e);
             startActivity(appDetailsIntent());
         }
     }

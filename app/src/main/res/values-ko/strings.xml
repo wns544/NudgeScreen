@@ -52,6 +52,7 @@
     <string name="diagnostics_clear">비우기</string>
     <string name="diagnostics_empty">아직 기록된 진단 로그가 없습니다.</string>
     <string name="diagnostics_share_subject">잠깐, 할 일 진단 로그</string>
+    <string name="device_admin_action">더블탭 화면 끄기 권한</string>
     <string name="device_admin_description">잠금화면에서 더블탭으로 화면을 끄기 위해 사용됩니다.</string>
     <string name="device_admin_explanation">잠깐, 할 일 잠금화면에서 빈 영역을 더블탭하면 화면을 끌 수 있게 합니다.</string>
     <string name="language_setting">언어</string>
