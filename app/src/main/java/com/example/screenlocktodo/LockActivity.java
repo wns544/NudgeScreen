@@ -54,6 +54,7 @@ public class LockActivity extends Activity {
     private static volatile long lastVisibleAt;
     private static final long TODO_DOUBLE_TAP_MS = 420L;
     private static final long CURTAIN_DOUBLE_TAP_MS = 360L;
+    private static final long INPUT_DRAFT_KEEP_MS = 60_000L;
 
     private LinearLayout todoList;
     private LinearLayout inputBlock;
@@ -90,6 +91,7 @@ public class LockActivity extends Activity {
     private boolean clockReceiverRegistered;
     private boolean keyboardVisible;
     private String pendingInputDraft = "";
+    private long pendingInputDraftSavedAt;
     private String lastBackgroundKey = "";
     private ValueAnimator inputBlockHeightAnimator;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
@@ -560,13 +562,13 @@ public class LockActivity extends Activity {
 
     private void addTodo() {
         if (input.getText().toString().trim().length() == 0) {
-            pendingInputDraft = "";
+            clearInputDraft();
             input.setText("");
             hideInput(true);
             return;
         }
         TodoStore.add(this, input.getText().toString());
-        pendingInputDraft = "";
+        clearInputDraft();
         input.setText("");
         hideInput(true);
         refreshTodos();
@@ -1118,7 +1120,7 @@ public class LockActivity extends Activity {
     }
 
     private void closeInputFromButton() {
-        pendingInputDraft = "";
+        clearInputDraft();
         if (input != null) {
             input.setText("");
         }
@@ -1127,14 +1129,24 @@ public class LockActivity extends Activity {
 
     private void saveInputDraft() {
         pendingInputDraft = input == null ? "" : input.getText().toString();
+        pendingInputDraftSavedAt = pendingInputDraft.length() == 0 ? 0L : SystemClock.elapsedRealtime();
     }
 
     private void restoreInputDraft() {
         if (input == null || pendingInputDraft.length() == 0) {
             return;
         }
+        if (SystemClock.elapsedRealtime() - pendingInputDraftSavedAt > INPUT_DRAFT_KEEP_MS) {
+            clearInputDraft();
+            return;
+        }
         input.setText(pendingInputDraft);
         input.setSelection(input.getText().length());
+    }
+
+    private void clearInputDraft() {
+        pendingInputDraft = "";
+        pendingInputDraftSavedAt = 0L;
     }
 
     private void hideKeyboard() {

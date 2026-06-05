@@ -420,12 +420,12 @@ public class MainActivity extends Activity {
             refreshTodos();
         }, false));
         drawerPanel.addView(actionRow(getString(R.string.language_setting) + " · " + currentLanguageName(), v -> showLanguageDialog(), false));
-        drawerPanel.addView(actionRow(getString(R.string.full_screen_alert_action), v -> showFullScreenIntentGuide(), false));
         drawerPanel.addView(actionRow(getString(R.string.device_admin_action), v -> {
             closeDrawer();
             openDeviceAdminSettings();
         }, false));
         drawerPanel.addView(drawerSectionTitle(getString(R.string.battery_help_title)));
+        drawerPanel.addView(actionRow(getString(R.string.full_screen_alert_action), v -> showFullScreenIntentGuide(), false));
         drawerPanel.addView(actionRow(getString(R.string.battery_unrestricted_action), v -> {
             closeDrawer();
             showBatteryGuideDialog(false);
