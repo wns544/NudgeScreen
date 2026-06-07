@@ -119,9 +119,19 @@ final class DiagnosticLog {
         builder.append("Device: ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');
         builder.append("Android: ").append(Build.VERSION.RELEASE).append(" / SDK ").append(Build.VERSION.SDK_INT).append('\n');
         builder.append("Lock enabled: ").append(AppSettings.lockScreenEnabled(context)).append('\n');
+        builder.append("Overlay opacity: ").append(AppSettings.overlayOpacity(context)).append('%').append('\n');
+        builder.append("Lock background mode: ").append(lockBackgroundMode(context)).append('\n');
         builder.append("Battery unrestricted: ").append(isBatteryUnrestricted(context)).append('\n');
         builder.append("Full screen intent: ").append(canUseFullScreenIntent(context)).append('\n');
         return builder.toString();
+    }
+
+    private static String lockBackgroundMode(Context context) {
+        String uri = AppSettings.lockBackgroundImageUri(context);
+        if (uri == null || uri.length() == 0) {
+            return "system wallpaper layer";
+        }
+        return "selected image override";
     }
 
     private static String versionName(Context context) {
