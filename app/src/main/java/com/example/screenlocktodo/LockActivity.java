@@ -15,6 +15,7 @@ import android.content.IntentFilter;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
@@ -216,6 +217,8 @@ public class LockActivity extends Activity {
         Window window = getWindow();
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
         window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        window.setDimAmount(0f);
+        window.setFormat(PixelFormat.TRANSLUCENT);
         window.setBackgroundDrawable(new ColorDrawable(0x00000000));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
