@@ -266,8 +266,12 @@ public class LockActivity extends Activity {
         }
 
         String imageUri = AppSettings.lockBackgroundImageUri(this);
-        if (imageUri != null && imageUri.length() > 0 && applySelectedWallpaperImage(imageUri, force)) {
-            return;
+        if (imageUri != null && imageUri.length() > 0) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "selected background configured; system wallpaper layer will be covered");
+            if (applySelectedWallpaperImage(imageUri, force)) {
+                return;
+            }
+            DiagnosticLog.record(this, "NudgeLockActivity", "selected background unavailable; falling back to system wallpaper layer");
         }
 
         wallpaperBackground.setImageDrawable(null);
