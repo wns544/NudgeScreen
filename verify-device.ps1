@@ -35,7 +35,10 @@ function Save-AdbText {
 function Save-Screenshot {
     param([string] $Name)
     $path = Join-Path $out $Name
-    & $adb exec-out screencap -p | Set-Content -Path $path -Encoding Byte
+    $remote = "/sdcard/nudgescreen-$Name"
+    Invoke-Adb shell screencap -p $remote | Out-Null
+    Invoke-Adb pull $remote $path | Out-Null
+    Invoke-Adb shell rm $remote | Out-Null
     return $path
 }
 
