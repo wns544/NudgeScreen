@@ -4,6 +4,8 @@ import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.KeyguardManager;
+import android.app.WallpaperInfo;
+import android.app.WallpaperManager;
 import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -211,11 +213,14 @@ public class LockActivity extends Activity {
 
     private void configureLockWindow() {
         boolean turnScreenOn = getIntent().getBooleanExtra(EXTRA_TURN_SCREEN_ON, true);
+        Window window = getWindow();
+        window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        window.setBackgroundDrawable(new ColorDrawable(0x00000000));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(turnScreenOn);
         } else {
-            Window window = getWindow();
             window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
             if (turnScreenOn) {
                 window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
@@ -270,6 +275,38 @@ public class LockActivity extends Activity {
         wallpaperBackground.setVisibility(View.GONE);
         lastBackgroundKey = "system-wallpaper";
         DiagnosticLog.record(this, "NudgeLockActivity", "using system wallpaper background");
+        recordSystemWallpaperState();
+    }
+
+    private void recordSystemWallpaperState() {
+        try {
+            WallpaperManager wallpaperManager = WallpaperManager.getInstance(this);
+            StringBuilder message = new StringBuilder("system wallpaper state");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                message.append(" lockId=").append(wallpaperManager.getWallpaperId(WallpaperManager.FLAG_LOCK));
+                message.append(" systemId=").append(wallpaperManager.getWallpaperId(WallpaperManager.FLAG_SYSTEM));
+                WallpaperInfo lockInfo = wallpaperManager.getWallpaperInfo(WallpaperManager.FLAG_LOCK);
+                WallpaperInfo systemInfo = wallpaperManager.getWallpaperInfo(WallpaperManager.FLAG_SYSTEM);
+                message.append(" lockInfo=").append(wallpaperInfoLabel(lockInfo));
+                message.append(" systemInfo=").append(wallpaperInfoLabel(systemInfo));
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                message.append(" lockColors=").append(wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_LOCK) != null);
+                message.append(" systemColors=").append(wallpaperManager.getWallpaperColors(WallpaperManager.FLAG_SYSTEM) != null);
+            }
+            boolean showWallpaper = (getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER) != 0;
+            message.append(" showWallpaperFlag=").append(showWallpaper);
+            DiagnosticLog.record(this, "NudgeLockActivity", message.toString());
+        } catch (RuntimeException e) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "system wallpaper state failed", e);
+        }
+    }
+
+    private String wallpaperInfoLabel(WallpaperInfo info) {
+        if (info == null) {
+            return "null";
+        }
+        return info.getPackageName() + "/" + info.getServiceName();
     }
 
     private boolean applySelectedWallpaperImage(String imageUri, boolean force) {
