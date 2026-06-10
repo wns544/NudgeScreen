@@ -115,6 +115,7 @@ public class LockActivity extends Activity {
         showing = true;
         configureLockWindow();
         super.onCreate(savedInstanceState);
+        todosLocked = AppSettings.todosLocked(this);
         DiagnosticLog.recordAppState(this, "lock activity onCreate turnScreenOn=" + getIntent().getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
         LockMonitorService.cancelLockNotification(this);
         registerBackHandler();
@@ -157,6 +158,7 @@ public class LockActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         DiagnosticLog.recordAppState(this, "lock activity onNewIntent turnScreenOn=" + intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true));
+        todosLocked = AppSettings.todosLocked(this);
         configureLockWindow();
         LockMonitorService.cancelLockNotification(this);
         updateWallpaperBackground(true);
@@ -590,6 +592,8 @@ public class LockActivity extends Activity {
 
     private void toggleTodoLock() {
         todosLocked = !todosLocked;
+        AppSettings.setTodosLocked(this, todosLocked);
+        DiagnosticLog.record(this, "NudgeLockActivity", "todos locked=" + todosLocked);
         updateMenuButtons();
         refreshTodos();
     }
@@ -600,6 +604,7 @@ public class LockActivity extends Activity {
         }
         if (undoButton != null) {
             boolean canUndo = lastDeletedItem != null;
+            undoButton.setVisibility(canUndo ? View.VISIBLE : View.GONE);
             undoButton.setActive(canUndo);
         }
     }
@@ -1362,6 +1367,7 @@ public class LockActivity extends Activity {
     private final class LockToggleView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF rect = new RectF();
+        private final Path shacklePath = new Path();
         private boolean locked;
 
         LockToggleView(Context context) {
@@ -1385,39 +1391,50 @@ public class LockActivity extends Activity {
             super.onDraw(canvas);
             float cx = getWidth() * 0.5f;
             float cy = getHeight() * 0.5f;
-            float bodyWidth = dp(23);
+            float bodyWidth = dp(22);
             float bodyHeight = dp(17);
             float left = cx - bodyWidth * 0.5f;
-            float top = cy + dp(1);
+            float top = cy + dp(2);
             float right = cx + bodyWidth * 0.5f;
             float bottom = top + bodyHeight;
 
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(2.2f));
-            paint.setColor(0xDFFFFFFF);
-            rect.set(left, top, right, bottom);
-            canvas.drawRoundRect(rect, dp(2.5f), dp(2.5f), paint);
-
             float shackleLeft = cx - dp(7);
             float shackleRight = cx + dp(7);
-            float shackleTop = top - dp(12);
-            float shackleBottom = top + dp(2);
-            float shackleLegStart = shackleTop + dp(7);
+            float shackleTop = top - dp(13);
+            float shackleBase = top + dp(1);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2.8f));
+            paint.setColor(0xDFFFFFFF);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            shacklePath.reset();
             if (locked) {
-                rect.set(shackleLeft, shackleTop, shackleRight, shackleBottom);
-                canvas.drawArc(rect, 180, 180, false, paint);
-                canvas.drawLine(shackleLeft, shackleLegStart, shackleLeft, top, paint);
-                canvas.drawLine(shackleRight, shackleLegStart, shackleRight, top, paint);
+                shacklePath.moveTo(shackleLeft, shackleBase);
+                shacklePath.lineTo(shackleLeft, top - dp(5));
+                shacklePath.cubicTo(shackleLeft, shackleTop, shackleRight, shackleTop, shackleRight, top - dp(5));
+                shacklePath.lineTo(shackleRight, shackleBase);
             } else {
-                rect.set(shackleLeft, shackleTop, shackleRight, shackleBottom);
-                canvas.drawArc(rect, 180, 145, false, paint);
-                canvas.drawLine(shackleLeft, shackleLegStart, shackleLeft, top, paint);
+                shacklePath.moveTo(shackleLeft, shackleBase);
+                shacklePath.lineTo(shackleLeft, top - dp(5));
+                shacklePath.cubicTo(shackleLeft, shackleTop, shackleRight + dp(5), shackleTop, shackleRight + dp(7), top - dp(6));
             }
+            canvas.drawPath(shacklePath, paint);
 
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(0xEFFFFFFF);
-            canvas.drawCircle(cx, top + dp(7), dp(3.1f), paint);
-            rect.set(cx - dp(1.2f), top + dp(8), cx + dp(1.2f), top + dp(13));
+            rect.set(left, top, right, bottom);
+            canvas.drawRoundRect(rect, dp(3), dp(3), paint);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(1.2f));
+            paint.setColor(0x55FFFFFF);
+            canvas.drawRoundRect(rect, dp(3), dp(3), paint);
+
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0xCC3D3D3D);
+            canvas.drawCircle(cx, top + dp(7), dp(2.8f), paint);
+            rect.set(cx - dp(1.1f), top + dp(8), cx + dp(1.1f), top + dp(13));
             canvas.drawRoundRect(rect, dp(1.2f), dp(1.2f), paint);
         }
     }
@@ -1446,25 +1463,27 @@ public class LockActivity extends Activity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            int iconColor = active ? 0xEFFFFFFF : 0xCCFFFFFF;
+            int iconColor = active ? 0xEFFFFFFF : 0xAFFFFFFF;
             float cx = getWidth() * 0.5f;
             float cy = getHeight() * 0.5f;
 
             paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(3f));
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setColor(iconColor);
             arrowPath.reset();
-            arrowPath.moveTo(cx - dp(4), cy - dp(10));
-            arrowPath.lineTo(cx - dp(14), cy - dp(4));
-            arrowPath.lineTo(cx - dp(5), cy + dp(3));
-            arrowPath.moveTo(cx - dp(7), cy - dp(4));
-            arrowPath.cubicTo(cx + dp(3), cy - dp(13), cx + dp(17), cy - dp(8), cx + dp(17), cy + dp(3));
-            arrowPath.cubicTo(cx + dp(17), cy + dp(13), cx + dp(4), cy + dp(16), cx - dp(4), cy + dp(10));
-
-            paint.setColor(0x66000000);
-            paint.setStrokeWidth(dp(5f));
+            arrowPath.moveTo(cx - dp(12), cy - dp(4));
+            arrowPath.cubicTo(cx - dp(5), cy - dp(13), cx + dp(15), cy - dp(11), cx + dp(16), cy + dp(2));
+            arrowPath.cubicTo(cx + dp(16), cy + dp(13), cx + dp(3), cy + dp(16), cx - dp(6), cy + dp(10));
             canvas.drawPath(arrowPath, paint);
 
+            arrowPath.reset();
+            arrowPath.moveTo(cx - dp(12), cy - dp(4));
+            arrowPath.lineTo(cx - dp(3), cy - dp(11));
+            arrowPath.moveTo(cx - dp(12), cy - dp(4));
+            arrowPath.lineTo(cx - dp(4), cy + dp(4));
             paint.setColor(iconColor);
-            paint.setStrokeWidth(dp(2.8f));
             canvas.drawPath(arrowPath, paint);
         }
     }

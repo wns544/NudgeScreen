@@ -12,6 +12,7 @@ final class AppSettings {
     private static final String KEY_LOCK_RECOVERY_VERSION = "lock_screen_recovery_version";
     private static final String KEY_OVERLAY_OPACITY = "overlay_opacity";
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
+    private static final String KEY_TODOS_LOCKED = "todos_locked";
     private static final String KEY_BATTERY_GUIDE_SHOWN = "battery_guide_shown";
     private static final String KEY_LANGUAGE_TAG = "language_tag";
     private static final String KEY_LOCK_BACKGROUND_IMAGE_URI = "lock_background_image_uri";
@@ -58,6 +59,14 @@ final class AppSettings {
 
     static void setCurtainUnlockBothDirections(Context context, boolean value) {
         prefs(context).edit().putBoolean(KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS, value).apply();
+    }
+
+    static boolean todosLocked(Context context) {
+        return prefs(context).getBoolean(KEY_TODOS_LOCKED, false);
+    }
+
+    static void setTodosLocked(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_TODOS_LOCKED, value).apply();
     }
 
     static boolean batteryGuideShown(Context context) {
