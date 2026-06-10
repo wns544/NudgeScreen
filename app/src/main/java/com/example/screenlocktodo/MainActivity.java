@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -39,6 +40,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
 
+import java.util.ArrayDeque;
 import java.util.List;
 
 public class MainActivity extends Activity {
@@ -55,8 +57,11 @@ public class MainActivity extends Activity {
     private static final int COLOR_DANGER = 0xFFD9796F;
     private static final int COLOR_FIELD = 0xFFF2F2F7;
 
+    private ScrollView mainScroll;
     private LinearLayout todoList;
     private EditText input;
+    private Button undoDeleteButton;
+    private final ArrayDeque<DeletedTodo> deletedTodos = new ArrayDeque<>();
     private TextView opacityValue;
     private View drawerScrim;
     private LinearLayout drawerPanel;
@@ -175,14 +180,15 @@ public class MainActivity extends Activity {
         drawerOpen = false;
         FrameLayout shell = new DrawerRootLayout(this);
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(COLOR_BG);
+        mainScroll = new ScrollView(this);
+        mainScroll.setFillViewport(true);
+        mainScroll.setClipToPadding(false);
+        mainScroll.setBackgroundColor(COLOR_BG);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20), dp(26), dp(20), dp(28));
-        scroll.addView(root, new ScrollView.LayoutParams(
+        mainScroll.addView(root, new ScrollView.LayoutParams(
                 ScrollView.LayoutParams.MATCH_PARENT,
                 ScrollView.LayoutParams.WRAP_CONTENT
         ));
@@ -191,7 +197,7 @@ public class MainActivity extends Activity {
         root.addView(lockSettingsCard(), cardParams());
         root.addView(todoCard(), cardParams());
 
-        shell.addView(scroll, new FrameLayout.LayoutParams(
+        shell.addView(mainScroll, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
         ));
@@ -350,6 +356,11 @@ public class MainActivity extends Activity {
         input.setTextSize(15);
         input.setPadding(dp(14), 0, dp(14), 0);
         input.setBackground(rounded(COLOR_FIELD, 8));
+        input.setOnFocusChangeListener((view, hasFocus) -> {
+            if (hasFocus) {
+                scrollTodoInputIntoView(inputRow);
+            }
+        });
         inputRow.addView(input, new LinearLayout.LayoutParams(0, dp(50), 1));
 
         Button add = filledButton(getString(R.string.add));
@@ -357,6 +368,17 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams addParams = new LinearLayout.LayoutParams(dp(82), dp(50));
         addParams.leftMargin = dp(8);
         inputRow.addView(add, addParams);
+
+        undoDeleteButton = quietButton("\uC0AD\uC81C \uCDE8\uC18C", COLOR_ACCENT);
+        undoDeleteButton.setOnClickListener(v -> undoDelete());
+        LinearLayout.LayoutParams undoParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(42)
+        );
+        undoParams.gravity = Gravity.RIGHT;
+        undoParams.bottomMargin = dp(8);
+        card.addView(undoDeleteButton, undoParams);
+        updateUndoDeleteButton();
 
         todoList = new LinearLayout(this);
         todoList.setOrientation(LinearLayout.VERTICAL);
@@ -737,6 +759,20 @@ public class MainActivity extends Activity {
         refreshTodos();
     }
 
+    private void scrollTodoInputIntoView(View anchor) {
+        if (mainScroll == null || anchor == null) {
+            return;
+        }
+        mainScroll.setPadding(0, 0, 0, dp(180));
+        mainScroll.postDelayed(() -> {
+            Rect anchorRect = new Rect();
+            anchor.getDrawingRect(anchorRect);
+            mainScroll.offsetDescendantRectToMyCoords(anchor, anchorRect);
+            int targetY = Math.max(0, anchorRect.top - dp(18));
+            mainScroll.smoothScrollTo(0, targetY);
+        }, 180);
+    }
+
     private void refreshTodos() {
         if (todoList == null) {
             return;
@@ -757,7 +793,7 @@ public class MainActivity extends Activity {
         }
 
         for (int i = 0; i < items.size(); i++) {
-            View row = todoRow(items.get(i));
+            View row = todoRow(items.get(i), i);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
@@ -767,7 +803,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private View todoRow(TodoItem item) {
+    private View todoRow(TodoItem item, int index) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -790,11 +826,39 @@ public class MainActivity extends Activity {
 
         Button delete = quietButton(getString(R.string.delete), COLOR_DANGER);
         delete.setOnClickListener(v -> {
+            deletedTodos.push(new DeletedTodo(item, index));
             TodoStore.remove(this, item.id);
+            updateUndoDeleteButton();
             refreshTodos();
         });
         row.addView(delete, new LinearLayout.LayoutParams(dp(68), dp(42)));
         return row;
+    }
+
+    private void undoDelete() {
+        if (deletedTodos.isEmpty()) {
+            return;
+        }
+        DeletedTodo deletedTodo = deletedTodos.pop();
+        TodoStore.restore(this, deletedTodo.item, deletedTodo.index);
+        updateUndoDeleteButton();
+        refreshTodos();
+    }
+
+    private void updateUndoDeleteButton() {
+        if (undoDeleteButton != null) {
+            undoDeleteButton.setVisibility(deletedTodos.isEmpty() ? View.GONE : View.VISIBLE);
+        }
+    }
+
+    private static final class DeletedTodo {
+        final TodoItem item;
+        final int index;
+
+        DeletedTodo(TodoItem item, int index) {
+            this.item = item;
+            this.index = index;
+        }
     }
 
     private void requestNotificationPermission() {

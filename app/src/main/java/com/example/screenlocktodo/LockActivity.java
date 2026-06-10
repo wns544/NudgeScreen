@@ -47,6 +47,7 @@ import android.widget.TextView;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -78,8 +79,7 @@ public class LockActivity extends Activity {
     private ImageView wallpaperBackground;
     private View curtainBackground;
     private FrameLayout curtainContent;
-    private TodoItem lastDeletedItem;
-    private int lastDeletedIndex = -1;
+    private final ArrayDeque<DeletedTodo> deletedTodos = new ArrayDeque<>();
     private boolean todosLocked;
     private String lastRenderedTodoKey;
     private long pendingTapItemId = -1L;
@@ -612,7 +612,7 @@ public class LockActivity extends Activity {
             lockButton.setLocked(todosLocked);
         }
         if (undoButton != null) {
-            boolean canUndo = lastDeletedItem != null;
+            boolean canUndo = !deletedTodos.isEmpty();
             undoButton.setActive(canUndo);
         }
     }
@@ -1071,8 +1071,7 @@ public class LockActivity extends Activity {
     }
 
     private void deleteTodo(TodoItem item, int index) {
-        lastDeletedItem = item;
-        lastDeletedIndex = index;
+        deletedTodos.push(new DeletedTodo(item, index));
         updateMenuButtons();
         TodoStore.remove(this, item.id);
         refreshTodos();
@@ -1120,14 +1119,23 @@ public class LockActivity extends Activity {
     }
 
     private void undoDelete() {
-        if (lastDeletedItem == null) {
+        if (deletedTodos.isEmpty()) {
             return;
         }
-        TodoStore.restore(this, lastDeletedItem, lastDeletedIndex);
-        lastDeletedItem = null;
-        lastDeletedIndex = -1;
+        DeletedTodo deletedTodo = deletedTodos.pop();
+        TodoStore.restore(this, deletedTodo.item, deletedTodo.index);
         updateMenuButtons();
         refreshTodos();
+    }
+
+    private static final class DeletedTodo {
+        final TodoItem item;
+        final int index;
+
+        DeletedTodo(TodoItem item, int index) {
+            this.item = item;
+            this.index = index;
+        }
     }
 
     private void toggleInput() {
