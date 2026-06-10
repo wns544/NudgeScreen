@@ -604,7 +604,6 @@ public class LockActivity extends Activity {
         }
         if (undoButton != null) {
             boolean canUndo = lastDeletedItem != null;
-            undoButton.setVisibility(canUndo ? View.VISIBLE : View.GONE);
             undoButton.setActive(canUndo);
         }
     }
