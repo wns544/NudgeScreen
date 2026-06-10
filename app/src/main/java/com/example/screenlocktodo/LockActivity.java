@@ -20,6 +20,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -1364,20 +1365,16 @@ public class LockActivity extends Activity {
     }
 
     private final class LockToggleView extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final RectF rect = new RectF();
-        private final Path shacklePath = new Path();
+        private final Drawable lockedIcon;
+        private final Drawable unlockedIcon;
         private boolean locked;
 
         LockToggleView(Context context) {
             super(context);
             setClickable(true);
             setFocusable(true);
-            paint.setColor(0xCCFFFFFF);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setStrokeWidth(dp(2.2f));
+            lockedIcon = requireDrawable(R.drawable.ic_menu_lock_closed);
+            unlockedIcon = requireDrawable(R.drawable.ic_menu_lock_open);
         }
 
         void setLocked(boolean locked) {
@@ -1388,69 +1385,19 @@ public class LockActivity extends Activity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            float cx = getWidth() * 0.5f;
-            float cy = getHeight() * 0.5f;
-            float bodyWidth = dp(22);
-            float bodyHeight = dp(17);
-            float left = cx - bodyWidth * 0.5f;
-            float top = cy + dp(2);
-            float right = cx + bodyWidth * 0.5f;
-            float bottom = top + bodyHeight;
-
-            float shackleLeft = cx - dp(7);
-            float shackleRight = cx + dp(7);
-            float shackleTop = top - dp(13);
-            float shackleBase = top + dp(1);
-
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(2.8f));
-            paint.setColor(0xDFFFFFFF);
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setStrokeJoin(Paint.Join.ROUND);
-            shacklePath.reset();
-            if (locked) {
-                shacklePath.moveTo(shackleLeft, shackleBase);
-                shacklePath.lineTo(shackleLeft, top - dp(5));
-                shacklePath.cubicTo(shackleLeft, shackleTop, shackleRight, shackleTop, shackleRight, top - dp(5));
-                shacklePath.lineTo(shackleRight, shackleBase);
-            } else {
-                shacklePath.moveTo(shackleLeft, shackleBase);
-                shacklePath.lineTo(shackleLeft, top - dp(5));
-                shacklePath.cubicTo(shackleLeft, shackleTop, shackleRight + dp(5), shackleTop, shackleRight + dp(7), top - dp(6));
-            }
-            canvas.drawPath(shacklePath, paint);
-
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(0xEFFFFFFF);
-            rect.set(left, top, right, bottom);
-            canvas.drawRoundRect(rect, dp(3), dp(3), paint);
-
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(1.2f));
-            paint.setColor(0x55FFFFFF);
-            canvas.drawRoundRect(rect, dp(3), dp(3), paint);
-
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(0xCC3D3D3D);
-            canvas.drawCircle(cx, top + dp(7), dp(2.8f), paint);
-            rect.set(cx - dp(1.1f), top + dp(8), cx + dp(1.1f), top + dp(13));
-            canvas.drawRoundRect(rect, dp(1.2f), dp(1.2f), paint);
+            drawCenteredIcon(canvas, locked ? lockedIcon : unlockedIcon, 0xFF);
         }
     }
 
     private final class UndoButtonView extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path arrowPath = new Path();
+        private final Drawable undoIcon;
         private boolean active;
 
         UndoButtonView(Context context) {
             super(context);
             setClickable(true);
             setFocusable(true);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setStrokeWidth(dp(2.4f));
+            undoIcon = requireDrawable(R.drawable.ic_menu_undo_uturn);
         }
 
         void setActive(boolean active) {
@@ -1462,29 +1409,30 @@ public class LockActivity extends Activity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            int iconColor = active ? 0xEFFFFFFF : 0xAFFFFFFF;
-            float cx = getWidth() * 0.5f;
-            float cy = getHeight() * 0.5f;
-
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(3f));
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setStrokeJoin(Paint.Join.ROUND);
-            paint.setColor(iconColor);
-            arrowPath.reset();
-            arrowPath.moveTo(cx - dp(12), cy - dp(4));
-            arrowPath.cubicTo(cx - dp(5), cy - dp(13), cx + dp(15), cy - dp(11), cx + dp(16), cy + dp(2));
-            arrowPath.cubicTo(cx + dp(16), cy + dp(13), cx + dp(3), cy + dp(16), cx - dp(6), cy + dp(10));
-            canvas.drawPath(arrowPath, paint);
-
-            arrowPath.reset();
-            arrowPath.moveTo(cx - dp(12), cy - dp(4));
-            arrowPath.lineTo(cx - dp(3), cy - dp(11));
-            arrowPath.moveTo(cx - dp(12), cy - dp(4));
-            arrowPath.lineTo(cx - dp(4), cy + dp(4));
-            paint.setColor(iconColor);
-            canvas.drawPath(arrowPath, paint);
+            drawCenteredIcon(canvas, undoIcon, active ? 0xEF : 0xAF);
         }
+    }
+
+    private Drawable requireDrawable(int drawableId) {
+        Drawable drawable;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            drawable = getResources().getDrawable(drawableId, getTheme());
+        } else {
+            drawable = getResources().getDrawable(drawableId);
+        }
+        if (drawable == null) {
+            throw new IllegalStateException("Missing drawable resource: " + drawableId);
+        }
+        return drawable.mutate();
+    }
+
+    private void drawCenteredIcon(Canvas canvas, Drawable drawable, int alpha) {
+        int side = Math.round(Math.min(canvas.getWidth(), canvas.getHeight()) * (24f / 44f));
+        int left = Math.round((canvas.getWidth() - side) * 0.5f);
+        int top = Math.round((canvas.getHeight() - side) * 0.5f);
+        drawable.setBounds(left, top, left + side, top + side);
+        drawable.setAlpha(alpha);
+        drawable.draw(canvas);
     }
 
     private void continueSystemUnlock() {
