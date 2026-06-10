@@ -66,6 +66,7 @@ public class LockActivity extends Activity {
     private TextView inputDivider;
     private TextView topTodoDivider;
     private EditText input;
+    private CheckSubmitButtonView inputSubmitButton;
     private PlusButtonView plusButton;
     private TextView timeText;
     private TextView meridiemText;
@@ -498,6 +499,9 @@ public class LockActivity extends Activity {
                 dp(46)
         ));
 
+        View inputLeftSpacer = new View(this);
+        inputRow.addView(inputLeftSpacer, new LinearLayout.LayoutParams(dp(44), dp(46)));
+
         input = new EditText(this);
         input.setSingleLine(true);
         input.setHint(getString(R.string.new_todo_hint));
@@ -517,7 +521,11 @@ public class LockActivity extends Activity {
             }
             return false;
         });
-        inputRow.addView(input, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(46)));
+        inputRow.addView(input, new LinearLayout.LayoutParams(0, dp(46), 1));
+
+        inputSubmitButton = new CheckSubmitButtonView(this);
+        inputSubmitButton.setOnClickListener(v -> addTodo());
+        inputRow.addView(inputSubmitButton, new LinearLayout.LayoutParams(dp(44), dp(46)));
 
         inputDivider = text("\u2013", 16, 0x66FFFFFF, false);
         inputDivider.setGravity(Gravity.CENTER);
@@ -958,6 +966,12 @@ public class LockActivity extends Activity {
     }
 
     private void handleTodoTap(TodoItem item) {
+        if (item.done) {
+            TodoStore.setDone(this, item.id, false);
+            refreshTodos();
+            return;
+        }
+
         long now = SystemClock.uptimeMillis();
         if (pendingTapItemId == item.id) {
             pendingTapItemId = -1L;
@@ -1365,6 +1379,8 @@ public class LockActivity extends Activity {
     }
 
     private final class LockToggleView extends View {
+        private final Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF backgroundRect = new RectF();
         private final Drawable lockedIcon;
         private final Drawable unlockedIcon;
         private boolean locked;
@@ -1385,7 +1401,58 @@ public class LockActivity extends Activity {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
+            if (locked) {
+                drawLockedStateBackground(canvas);
+            }
             drawCenteredIcon(canvas, locked ? lockedIcon : unlockedIcon, 0xFF);
+        }
+
+        private void drawLockedStateBackground(Canvas canvas) {
+            float margin = dp(4);
+            backgroundRect.set(margin, margin, getWidth() - margin, getHeight() - margin);
+            backgroundPaint.setStyle(Paint.Style.FILL);
+            backgroundPaint.setColor(0x22FFFFFF);
+            canvas.drawRoundRect(backgroundRect, dp(12), dp(12), backgroundPaint);
+            backgroundPaint.setStyle(Paint.Style.STROKE);
+            backgroundPaint.setStrokeWidth(dp(1));
+            backgroundPaint.setColor(0x26FFFFFF);
+            canvas.drawRoundRect(backgroundRect, dp(12), dp(12), backgroundPaint);
+        }
+    }
+
+    private final class CheckSubmitButtonView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        CheckSubmitButtonView(Context context) {
+            super(context);
+            setClickable(true);
+            setFocusable(true);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float centerX = getWidth() * 0.5f;
+            float centerY = getHeight() * 0.5f;
+            float radius = dp(14);
+
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0x18FFFFFF);
+            canvas.drawCircle(centerX, centerY, radius, paint);
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2));
+            paint.setColor(0xDFFFFFFF);
+            float startX = centerX - dp(7);
+            float startY = centerY;
+            float midX = centerX - dp(2);
+            float midY = centerY + dp(5);
+            float endX = centerX + dp(8);
+            float endY = centerY - dp(6);
+            canvas.drawLine(startX, startY, midX, midY, paint);
+            canvas.drawLine(midX, midY, endX, endY, paint);
         }
     }
 
@@ -1822,7 +1889,11 @@ public class LockActivity extends Activity {
                     if (swiping) {
                         rowView.setTranslationX(moveDx * 0.82f);
                         rowView.setAlpha(1f);
-                        if (moveDx < 0) {
+                        if (item.done) {
+                            actionHint.setText("\uD574\uC81C");
+                            actionHint.setTextColor(0xCCD7E7FF);
+                            rowView.setBackgroundColor(0x182D6CDF);
+                        } else if (moveDx < 0) {
                             actionHint.setText(getString(R.string.todo_done_action));
                             actionHint.setTextColor(0xCC9BE7C2);
                             rowView.setBackgroundColor(0x1822B573);
@@ -1859,7 +1930,14 @@ public class LockActivity extends Activity {
                         }
                         return true;
                     }
-                    if (dx < 0) {
+                    if (item.done) {
+                        actionHint.setText("\uD574\uC81C");
+                        actionHint.setTextColor(0xCCD7E7FF);
+                        animateThen(rowView, dx < 0 ? -rowView.getWidth() : rowView.getWidth(), () -> {
+                            TodoStore.setDone(LockActivity.this, item.id, false);
+                            refreshTodos();
+                        });
+                    } else if (dx < 0) {
                         actionHint.setText(getString(R.string.todo_done_action));
                         actionHint.setTextColor(0xCC9BE7C2);
                         animateThen(rowView, -rowView.getWidth(), () -> {
