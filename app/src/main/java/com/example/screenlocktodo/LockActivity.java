@@ -1527,6 +1527,10 @@ public class LockActivity extends Activity {
     }
 
     private void lockNowFromCurtainDoubleTap() {
+        if (!AppSettings.doubleTapScreenOffEnabled(this)) {
+            DiagnosticLog.record(this, "NudgeLockActivity", "curtain double tap lock skipped; disabled");
+            return;
+        }
         DiagnosticLog.record(this, "NudgeLockActivity", "curtain double tap lock requested");
         DevicePolicyManager devicePolicyManager = (DevicePolicyManager) getSystemService(DEVICE_POLICY_SERVICE);
         ComponentName admin = new ComponentName(this, NudgeDeviceAdminReceiver.class);

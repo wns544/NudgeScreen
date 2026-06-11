@@ -12,6 +12,7 @@ final class AppSettings {
     private static final String KEY_LOCK_RECOVERY_VERSION = "lock_screen_recovery_version";
     private static final String KEY_OVERLAY_OPACITY = "overlay_opacity";
     private static final String KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS = "curtain_unlock_both_directions";
+    private static final String KEY_DOUBLE_TAP_SCREEN_OFF_ENABLED = "double_tap_screen_off_enabled";
     private static final String KEY_TODOS_LOCKED = "todos_locked";
     private static final String KEY_BATTERY_GUIDE_SHOWN = "battery_guide_shown";
     private static final String KEY_LANGUAGE_TAG = "language_tag";
@@ -59,6 +60,14 @@ final class AppSettings {
 
     static void setCurtainUnlockBothDirections(Context context, boolean value) {
         prefs(context).edit().putBoolean(KEY_CURTAIN_UNLOCK_BOTH_DIRECTIONS, value).apply();
+    }
+
+    static boolean doubleTapScreenOffEnabled(Context context) {
+        return prefs(context).getBoolean(KEY_DOUBLE_TAP_SCREEN_OFF_ENABLED, true);
+    }
+
+    static void setDoubleTapScreenOffEnabled(Context context, boolean value) {
+        prefs(context).edit().putBoolean(KEY_DOUBLE_TAP_SCREEN_OFF_ENABLED, value).apply();
     }
 
     static boolean todosLocked(Context context) {

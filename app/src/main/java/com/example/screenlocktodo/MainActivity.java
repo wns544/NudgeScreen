@@ -332,6 +332,27 @@ public class MainActivity extends Activity {
         });
         card.addView(curtainBothDirections);
 
+        CheckBox doubleTapScreenOff = new CheckBox(this);
+        doubleTapScreenOff.setText("\uB354\uBE14\uD0ED\uC73C\uB85C \uD654\uBA74 \uB044\uAE30");
+        doubleTapScreenOff.setTextSize(15);
+        doubleTapScreenOff.setTextColor(COLOR_INK);
+        doubleTapScreenOff.setPadding(0, dp(6), 0, 0);
+        doubleTapScreenOff.setChecked(AppSettings.doubleTapScreenOffEnabled(this));
+        doubleTapScreenOff.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            AppSettings.setDoubleTapScreenOffEnabled(MainActivity.this, isChecked);
+            DiagnosticLog.record(MainActivity.this, "NudgeMain", "double tap screen off=" + isChecked);
+        });
+        card.addView(doubleTapScreenOff);
+
+        TextView doubleTapWarning = text(
+                "\uC774 \uAE30\uB2A5\uC73C\uB85C \uD654\uBA74\uC744 \uB044\uBA74 \uB2E4\uC74C \uC7A0\uAE08 \uD574\uC81C \uC2DC \uC9C0\uBB38 \uB300\uC2E0 \uBE44\uBC00\uBC88\uD638\uAC00 \uD544\uC694\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+                13,
+                COLOR_MUTED,
+                false
+        );
+        doubleTapWarning.setPadding(dp(34), dp(2), 0, dp(2));
+        card.addView(doubleTapWarning);
+
         return card;
     }
 
