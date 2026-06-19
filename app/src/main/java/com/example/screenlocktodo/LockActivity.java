@@ -706,8 +706,8 @@ public class LockActivity extends Activity {
         }
 
         SwipeActionListener swipeActionListener = new SwipeActionListener(item, index, row, hint);
-        row.setOnTouchListener(swipeActionListener);
-        row.setOnClickListener(v -> handleTodoTap(item));
+        label.setOnTouchListener(swipeActionListener);
+        label.setOnClickListener(v -> handleTodoTap(item));
         return row;
     }
 
@@ -1786,8 +1786,11 @@ public class LockActivity extends Activity {
             }
             for (int i = 0; i < todoList.getChildCount(); i += 2) {
                 View row = todoList.getChildAt(i);
-                if (isInside(row, event)) {
-                    return true;
+                if (row instanceof LinearLayout && ((LinearLayout) row).getChildCount() > 1) {
+                    View label = ((LinearLayout) row).getChildAt(1);
+                    if (isInside(label, event)) {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -1921,7 +1924,7 @@ public class LockActivity extends Activity {
                     }
                     float dx = event.getRawX() - downX;
                     float dy = event.getRawY() - downY;
-                    if (Math.abs(dx) < dp(72) || Math.abs(dx) < Math.abs(dy) * 1.4f) {
+                    if (Math.abs(dx) < dp(72) || Math.abs(dx) < Math.abs(dy)) {
                         rowView.animate()
                                 .translationX(0f)
                                 .scaleX(1f)
